@@ -16,7 +16,9 @@
     "start": "concurrently -n server,web -c magenta,cyan \"npm run start -w server\" \"npm run start -w web\"",
     "lint": "npm run lint -w web",
     "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w web",
-    "test": "node scripts/e2e-flow.mjs",
+    "test": "node scripts/unit-validate.mjs && node scripts/e2e-flow.mjs",
+    "test:unit": "node scripts/unit-validate.mjs",
+    "test:e2e": "node scripts/e2e-flow.mjs",
     "test:mobile": "node scripts/mobile-audit.mjs"
   },
   "devDependencies": {

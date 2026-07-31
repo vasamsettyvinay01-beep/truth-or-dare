@@ -140,7 +140,42 @@ async function main() {
   check("unknown room code is rejected", !!badError, badError || "no error raised");
   badSocket.disconnect();
 
-  // 5. Ready up and start.
+  // 5. Authorization + validation guards.
+  const guestStartError = new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), 1500);
+    guestSocket.once("room:error", (err) => {
+      clearTimeout(timer);
+      resolve(err);
+    });
+    guestSocket.emit("room:start");
+  });
+  const guestBlocked = await guestStartError;
+  check(
+    "non-host cannot start the game",
+    !!guestBlocked && guestBlocked.code !== undefined,
+    guestBlocked ? guestBlocked.code : "no error"
+  );
+
+  let badCreateMsg = "";
+  try {
+    await emitAck(hostSocket, "room:create", { nickname: "  ", maxPlayers: 99 });
+  } catch (e) {
+    badCreateMsg = e.message;
+  }
+  check("invalid create payload is rejected", !!badCreateMsg, badCreateMsg || "no error");
+
+  const reactError = new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), 1500);
+    guestSocket.once("room:error", (err) => {
+      clearTimeout(timer);
+      resolve(err);
+    });
+    guestSocket.emit("chat:react", "<script>");
+  });
+  const badReact = await reactError;
+  check("invalid reaction is rejected", !!badReact, badReact ? badReact.message : "no error");
+
+  // 6. Ready up and start.
   hostSocket.emit("room:ready", true);
   guestSocket.emit("room:ready", true);
   await waitForState(hostSocket, (r) => r.players.every((p) => p.isReady), "all players ready");
