@@ -2,11 +2,14 @@ import { customAlphabet } from "nanoid";
 import { v4 as uuid } from "uuid";
 import {
   AVATAR_COLORS,
+  DEFAULT_MAX_PLAYERS,
   DEFAULT_SKIP_TOKENS,
+  LIMITS,
   ROOM_CODE_LENGTH,
   ROOM_IDLE_TTL_MS,
   RECONNECT_GRACE_MS,
   createDefaultSettings,
+  sanitizeSettingsPartial,
   type ChallengeType,
   type ChatMessage,
   type CurrentChallenge,
@@ -25,6 +28,8 @@ const makeCode = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", ROOM_CODE_LE
 const LOBBY_RECONNECT_GRACE_MS = 1000 * 90;
 /** How long a room with nobody connected is kept alive for reconnects. */
 const EMPTY_ROOM_TTL_MS = 1000 * 60 * 10;
+/** A kicked player is locked out for long enough that they give up re-joining. */
+const KICK_BAN_MS = 1000 * 60 * 5;
 
 interface RoomInternal {
   code: string;
@@ -45,15 +50,30 @@ interface RoomInternal {
   voicePeers: Set<string>;
   winnerId: string | null;
   pendingSpin: ChallengeType | null;
+  /** Re-rolls used by the player whose turn it currently is. */
+  newPromptsThisTurn: number;
 }
 
+export interface RemovalResult {
+  roomCode: string;
+  room: RoomPublic | null;
+  destroyed: boolean;
+  kickedSocketId: string | null;
+}
+
+export type RoomHookEvent = { type: string; code: string; room?: RoomPublic | null };
+
+/** Socket ids are server-side routing handles and must never reach other clients. */
 function publicPlayer(p: Player): Player {
-  return { ...p };
+  return { ...p, socketId: null };
 }
 
 export class RoomManager {
   private rooms = new Map<string, RoomInternal>();
   private socketToRoom = new Map<string, string>();
+  /** roomCode -> (playerId or socketId) -> ban expiry */
+  private bans = new Map<string, Map<string, number>>();
+  private ioHook: ((event: RoomHookEvent) => void) | null = null;
   private cleanupTimer: NodeJS.Timeout;
 
   constructor() {
@@ -62,6 +82,19 @@ export class RoomManager {
 
   destroy() {
     clearInterval(this.cleanupTimer);
+  }
+
+  setIoHook(fn: ((event: RoomHookEvent) => void) | null) {
+    this.ioHook = fn;
+  }
+
+  roomCount(): number {
+    return this.rooms.size;
+  }
+
+  /** Server-only lookup so socket ids stay out of broadcast payloads. */
+  socketIdForPlayer(code: string, playerId: string): string | null {
+    return this.getRoom(code)?.players.get(playerId)?.socketId ?? null;
   }
 
   private now() {
@@ -74,6 +107,28 @@ export class RoomManager {
 
   private getRoom(code: string): RoomInternal | undefined {
     return this.rooms.get(code.toUpperCase());
+  }
+
+  /** `key` is a playerId or a socket id — both identify a kicked participant. */
+  private ban(code: string, key: string) {
+    let list = this.bans.get(code);
+    if (!list) {
+      list = new Map();
+      this.bans.set(code, list);
+    }
+    list.set(key, this.now() + KICK_BAN_MS);
+  }
+
+  private isBanned(code: string, key: string): boolean {
+    const list = this.bans.get(code);
+    if (!list) return false;
+    const until = list.get(key);
+    if (!until) return false;
+    if (until <= this.now()) {
+      list.delete(key);
+      return false;
+    }
+    return true;
   }
 
   private ensureCategories(room: RoomInternal) {
@@ -94,8 +149,8 @@ export class RoomManager {
       currentPlayerId: room.turnOrder[room.currentTurnIndex] ?? null,
       currentChallenge: room.currentChallenge ? { ...room.currentChallenge } : null,
       level: room.level,
-      chat: room.chat.slice(-100),
-      usedPromptIds: [...room.usedPromptIds],
+      chat: room.chat.slice(-LIMITS.maxChatHistory),
+      usedPromptIds: [...room.usedPromptIds].slice(-LIMITS.maxUsedPromptIdsBroadcast),
       round: room.round,
       createdAt: room.createdAt,
       winnerId: room.winnerId,
@@ -121,7 +176,7 @@ export class RoomManager {
     const player: Player = {
       id: playerId,
       socketId: opts.socketId,
-      nickname: opts.nickname.trim().slice(0, 20),
+      nickname: opts.nickname.trim().slice(0, LIMITS.nicknameMax),
       color,
       isHost: true,
       isReady: false,
@@ -156,7 +211,10 @@ export class RoomManager {
       voicePeers: new Set(),
       winnerId: null,
       pendingSpin: null,
+      newPromptsThisTurn: 0,
     };
+
+    if (!Number.isFinite(room.settings.maxPlayers)) room.settings.maxPlayers = DEFAULT_MAX_PLAYERS;
 
     const reconnectToken = uuid();
     room.reconnectTokens.set(reconnectToken, playerId);
@@ -181,6 +239,9 @@ export class RoomManager {
     if (opts.reconnectToken) {
       const existingId = room.reconnectTokens.get(opts.reconnectToken);
       if (existingId) {
+        if (this.isBanned(room.code, existingId)) {
+          throw Object.assign(new Error("You were removed from this room"), { code: "KICKED" });
+        }
         const existing = room.players.get(existingId);
         if (existing) {
           const wasConnected = existing.isConnected;
@@ -198,14 +259,20 @@ export class RoomManager {
       }
     }
 
+    if (this.isBanned(room.code, opts.socketId)) {
+      throw Object.assign(new Error("You were removed from this room"), { code: "KICKED" });
+    }
     if (room.phase !== "lobby" && room.phase !== "level_select") {
       throw Object.assign(new Error("Game already in progress"), { code: "GAME_IN_PROGRESS" });
     }
-    if (room.players.size >= room.settings.maxPlayers) {
+    const cap = Number.isFinite(room.settings.maxPlayers)
+      ? room.settings.maxPlayers
+      : DEFAULT_MAX_PLAYERS;
+    if (room.players.size >= cap) {
       throw Object.assign(new Error("Room is full"), { code: "ROOM_FULL" });
     }
 
-    const desiredNickname = opts.nickname.trim().slice(0, 20) || "Player";
+    const desiredNickname = opts.nickname.trim().slice(0, LIMITS.nicknameMax) || "Player";
     const nicknameTaken = [...room.players.values()].some(
       (p) => p.nickname.toLowerCase() === desiredNickname.toLowerCase()
     );
@@ -219,7 +286,9 @@ export class RoomManager {
     const usedColors = new Set([...room.players.values()].map((p) => p.color));
     const available = AVATAR_COLORS.filter((c) => !usedColors.has(c));
     const color =
-      opts.color && !usedColors.has(opts.color)
+      opts.color &&
+      (AVATAR_COLORS as readonly string[]).includes(opts.color) &&
+      !usedColors.has(opts.color)
         ? opts.color
         : available[0] || AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
 
@@ -298,13 +367,13 @@ export class RoomManager {
     return this.removePlayer(room, player.id);
   }
 
-  private removePlayer(
-    room: RoomInternal,
-    playerId: string
-  ): { roomCode: string; room: RoomPublic | null; destroyed: boolean } {
+  private removePlayer(room: RoomInternal, playerId: string): RemovalResult {
     const player = room.players.get(playerId);
-    if (!player) return { roomCode: room.code, room: this.toPublic(room), destroyed: false };
+    if (!player) {
+      return { roomCode: room.code, room: this.toPublic(room), destroyed: false, kickedSocketId: null };
+    }
 
+    const kickedSocketId = player.socketId;
     if (player.socketId) this.socketToRoom.delete(player.socketId);
     for (const [token, id] of room.reconnectTokens) {
       if (id === playerId) room.reconnectTokens.delete(token);
@@ -318,7 +387,7 @@ export class RoomManager {
 
     if (room.players.size === 0) {
       this.destroyRoom(room.code, "empty");
-      return { roomCode: room.code, room: null, destroyed: true };
+      return { roomCode: room.code, room: null, destroyed: true, kickedSocketId };
     }
 
     if (room.hostId === playerId) {
@@ -331,15 +400,21 @@ export class RoomManager {
     // Check win conditions after removal
     this.checkSurvivalWin(room);
 
-    return { roomCode: room.code, room: this.toPublic(room), destroyed: false };
+    return { roomCode: room.code, room: this.toPublic(room), destroyed: false, kickedSocketId };
   }
 
-  kick(hostSocketId: string, targetId: string) {
+  kick(hostSocketId: string, targetId: string): RemovalResult {
     const room = this.roomForSocket(hostSocketId);
     const host = this.playerForSocket(hostSocketId, room);
     if (host.id !== room.hostId) throw Object.assign(new Error("Only host can kick"), { code: "NOT_HOST" });
     if (targetId === host.id) throw Object.assign(new Error("Cannot kick yourself"), { code: "INVALID" });
-    return this.removePlayer(room, targetId);
+    const code = room.code;
+    const result = this.removePlayer(room, targetId);
+    // Ban both handles: the id blocks token reconnects, the socket blocks an
+    // instant re-join from the same tab.
+    this.ban(code, targetId);
+    if (result.kickedSocketId) this.ban(code, result.kickedSocketId);
+    return result;
   }
 
   transferHost(hostSocketId: string, targetId: string) {
@@ -348,6 +423,9 @@ export class RoomManager {
     if (host.id !== room.hostId) throw Object.assign(new Error("Only host can transfer"), { code: "NOT_HOST" });
     const target = room.players.get(targetId);
     if (!target) throw Object.assign(new Error("Player not found"), { code: "NOT_FOUND" });
+    if (!target.isConnected) {
+      throw Object.assign(new Error("That player is disconnected"), { code: "PLAYER_OFFLINE" });
+    }
     host.isHost = false;
     target.isHost = true;
     room.hostId = targetId;
@@ -370,16 +448,35 @@ export class RoomManager {
     if (player.id !== room.hostId) throw Object.assign(new Error("Only host can change settings"), { code: "NOT_HOST" });
     if (room.phase !== "lobby") throw Object.assign(new Error("Settings locked during game"), { code: "BAD_PHASE" });
 
-    room.settings = {
-      ...room.settings,
-      ...partial,
-      maxPlayers: Math.min(20, Math.max(2, partial.maxPlayers ?? room.settings.maxPlayers)),
-      timerSeconds: Math.min(300, Math.max(0, partial.timerSeconds ?? room.settings.timerSeconds)),
-      remoteOnly: partial.remoteOnly ?? room.settings.remoteOnly ?? true,
-      categoryWeights: partial.categoryWeights
-        ? { ...(room.settings.categoryWeights || {}), ...partial.categoryWeights }
-        : room.settings.categoryWeights || {},
-    };
+    // Never spread caller input: only known keys are copied, each clamped.
+    const clean = sanitizeSettingsPartial(partial ?? {});
+    const next: RoomSettings = { ...room.settings };
+
+    if (clean.maxPlayers !== undefined && Number.isFinite(clean.maxPlayers)) {
+      next.maxPlayers = Math.min(
+        LIMITS.maxPlayersMax,
+        Math.max(LIMITS.maxPlayersMin, Math.floor(clean.maxPlayers))
+      );
+    }
+    if (clean.timerSeconds !== undefined && Number.isFinite(clean.timerSeconds)) {
+      next.timerSeconds = Math.min(LIMITS.timerMaxSeconds, Math.max(0, Math.floor(clean.timerSeconds)));
+    }
+    if (clean.skippingEnabled !== undefined) next.skippingEnabled = Boolean(clean.skippingEnabled);
+    if (clean.remoteOnly !== undefined) next.remoteOnly = Boolean(clean.remoteOnly);
+    if (clean.voiceEnabled !== undefined) next.voiceEnabled = Boolean(clean.voiceEnabled);
+    if (clean.chatEnabled !== undefined) next.chatEnabled = Boolean(clean.chatEnabled);
+    if (clean.playerOrder !== undefined) next.playerOrder = clean.playerOrder;
+    if (clean.gameMode !== undefined) next.gameMode = clean.gameMode;
+    if (clean.theme !== undefined) next.theme = clean.theme;
+    if (clean.enabledLevels !== undefined) next.enabledLevels = [...clean.enabledLevels];
+    if (clean.enabledCategories !== undefined) next.enabledCategories = [...clean.enabledCategories];
+    if (clean.categoryWeights !== undefined) {
+      next.categoryWeights = { ...(room.settings.categoryWeights || {}), ...clean.categoryWeights };
+    }
+    next.remoteOnly = next.remoteOnly ?? true;
+    next.categoryWeights = next.categoryWeights || {};
+
+    room.settings = next;
     this.ensureCategories(room);
     this.touch(room);
     return this.toPublic(room);
@@ -479,7 +576,7 @@ export class RoomManager {
     const room = this.roomForSocket(socketId);
     const player = this.playerForSocket(socketId, room);
     this.assertCurrentPlayer(room, player);
-    if (room.phase !== "spinning" && room.settings.gameMode !== "spin_wheel") {
+    if (room.phase !== "spinning") {
       throw Object.assign(new Error("Not spinning"), { code: "BAD_PHASE" });
     }
     const type: ChallengeType = Math.random() < 0.5 ? "truth" : "dare";
@@ -514,6 +611,10 @@ export class RoomManager {
     let confetti: { playerId: string; nickname: string } | undefined;
 
     if (action === "new_prompt") {
+      if (room.newPromptsThisTurn >= LIMITS.maxNewPromptsPerTurn) {
+        throw Object.assign(new Error("No more re-rolls this turn"), { code: "REROLL_LIMIT" });
+      }
+      room.newPromptsThisTurn += 1;
       this.assignPrompt(room, room.currentChallenge.type, true);
       this.touch(room);
       return { room: this.toPublic(room) };
@@ -529,8 +630,16 @@ export class RoomManager {
       player.skipTokens -= 1;
       this.pushSystem(room, `${player.nickname} skipped`);
 
+      // Backing out is how you go out in the elimination modes.
       if (room.settings.gameMode === "survival" || room.settings.gameMode === "last_standing") {
-        // skips don't eliminate in this design — only failing would; treat skip as soft pass
+        player.eliminated = true;
+        this.pushSystem(room, `${player.nickname} is out`);
+        if (this.checkSurvivalWin(room)) {
+          room.currentChallenge = null;
+          room.pendingSpin = null;
+          this.touch(room);
+          return { room: this.toPublic(room) };
+        }
       }
     }
 
@@ -549,6 +658,7 @@ export class RoomManager {
   private advanceTurn(room: RoomInternal) {
     room.currentChallenge = null;
     room.pendingSpin = null;
+    room.newPromptsThisTurn = 0;
 
     const activeIds = room.turnOrder.filter((id) => {
       const p = room.players.get(id);
@@ -589,19 +699,23 @@ export class RoomManager {
     room.phase = room.settings.gameMode === "spin_wheel" ? "spinning" : "playing";
   }
 
-  private checkSurvivalWin(room: RoomInternal) {
-    if (room.phase === "lobby" || room.phase === "level_select" || room.phase === "ended") return;
-    if (room.settings.gameMode !== "survival" && room.settings.gameMode !== "last_standing") return;
+  /** Returns true when this check ended the game. */
+  private checkSurvivalWin(room: RoomInternal): boolean {
+    if (room.phase === "lobby" || room.phase === "level_select" || room.phase === "ended") return false;
+    if (room.settings.gameMode !== "survival" && room.settings.gameMode !== "last_standing") return false;
     const alive = [...room.players.values()].filter((p) => p.isConnected && !p.eliminated);
     if (alive.length === 1) {
       room.winnerId = alive[0].id;
       room.phase = "ended";
       this.pushSystem(room, `${alive[0].nickname} is the last one standing!`);
+      return true;
     }
+    return false;
   }
 
   private assignPrompt(room: RoomInternal, type: ChallengeType, replace = false) {
     if (!room.level) throw Object.assign(new Error("No level"), { code: "NO_LEVEL" });
+    if (!replace) room.newPromptsThisTurn = 0;
     const picked = promptEngine.pickPrompt({
       roomId: room.code,
       type,
@@ -642,7 +756,7 @@ export class RoomManager {
     const room = this.roomForSocket(socketId);
     const player = this.playerForSocket(socketId, room);
     if (!room.settings.chatEnabled) throw Object.assign(new Error("Chat disabled"), { code: "CHAT_OFF" });
-    const cleaned = text.trim().slice(0, 300);
+    const cleaned = String(text ?? "").trim().slice(0, LIMITS.chatMax);
     if (!cleaned) throw Object.assign(new Error("Empty message"), { code: "EMPTY" });
     const message: ChatMessage = {
       id: uuid(),
@@ -654,9 +768,15 @@ export class RoomManager {
       type: "chat",
     };
     room.chat.push(message);
-    if (room.chat.length > 200) room.chat = room.chat.slice(-150);
+    this.trimChat(room);
     this.touch(room);
     return message;
+  }
+
+  private trimChat(room: RoomInternal) {
+    if (room.chat.length > LIMITS.maxChatHistory) {
+      room.chat = room.chat.slice(-LIMITS.maxChatHistory);
+    }
   }
 
   pinMessage(socketId: string, messageId: string) {
@@ -674,25 +794,42 @@ export class RoomManager {
   react(socketId: string, emoji: string, targetPlayerId?: string) {
     const room = this.roomForSocket(socketId);
     const player = this.playerForSocket(socketId, room);
+    if (!room.settings.chatEnabled) throw Object.assign(new Error("Chat disabled"), { code: "CHAT_OFF" });
+    const cleaned = String(emoji ?? "").trim().slice(0, LIMITS.reactionMax);
+    if (!cleaned) throw Object.assign(new Error("Invalid reaction"), { code: "EMPTY" });
+    const toId =
+      typeof targetPlayerId === "string" && room.players.has(targetPlayerId) ? targetPlayerId : undefined;
+
     const message: ChatMessage = {
       id: uuid(),
       playerId: player.id,
       nickname: player.nickname,
       color: player.color,
-      text: emoji,
+      text: cleaned,
       timestamp: this.now(),
       type: "reaction",
-      reaction: emoji,
+      reaction: cleaned,
     };
     room.chat.push(message);
+    this.trimChat(room);
     this.touch(room);
-    return { message, fromId: player.id, emoji, toId: targetPlayerId };
+    return { message, fromId: player.id, emoji: cleaned, toId };
   }
 
   importPrompts(socketId: string, pack: unknown) {
     const room = this.roomForSocket(socketId);
     const player = this.playerForSocket(socketId, room);
     if (player.id !== room.hostId) throw Object.assign(new Error("Only host"), { code: "NOT_HOST" });
+    // Size is checked before importing: the merged pack also contains the base
+    // catalog, and a rejected import must not disturb the room's existing pack.
+    const incoming = (pack as { prompts?: unknown })?.prompts;
+    if (Array.isArray(incoming) && incoming.length > LIMITS.maxPromptImport) {
+      throw Object.assign(
+        new Error(`Prompt pack too large (max ${LIMITS.maxPromptImport})`),
+        { code: "PACK_TOO_LARGE" }
+      );
+    }
+
     const merged = promptEngine.importPack(pack, room.code);
     room.settings.enabledCategories = [
       ...new Set([...room.settings.enabledCategories, ...merged.categories]),
@@ -759,6 +896,7 @@ export class RoomManager {
       timestamp: this.now(),
       type: "system",
     });
+    this.trimChat(room);
   }
 
   returnToLobby(socketId: string) {
@@ -792,6 +930,8 @@ export class RoomManager {
     }
     promptEngine.clearRoomPack(code);
     this.rooms.delete(code.toUpperCase());
+    this.bans.delete(room.code);
+    this.ioHook?.({ type: "destroyed", code: room.code, room: null });
     return reason;
   }
 
@@ -805,12 +945,16 @@ export class RoomManager {
           ? LOBBY_RECONNECT_GRACE_MS
           : RECONNECT_GRACE_MS;
 
+      let swept = false;
       for (const p of [...room.players.values()]) {
         if (!p.isConnected && now - p.lastSeenAt > grace) {
           this.removePlayer(room, p.id);
+          swept = true;
         }
       }
       if (!this.rooms.has(room.code)) continue;
+      // destroyRoom fires its own event, so this only covers survivors.
+      if (swept) this.ioHook?.({ type: "state", code: room.code, room: this.toPublic(room) });
 
       // Nothing should outlive a room everyone abandoned.
       const anyConnected = [...room.players.values()].some((p) => p.isConnected);

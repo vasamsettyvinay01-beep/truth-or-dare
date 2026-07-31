@@ -28,14 +28,38 @@ export const GAME_LEVELS: { id: GameLevel; label: string; description: string; c
   { id: "no_boundaries", label: "No Boundaries", description: "Adults only. No mercy.", color: "#a855f7" },
 ];
 
-export const GAME_MODES: { id: GameMode; label: string; description: string; icon: string }[] = [
+export const GAME_MODES: { id: GameMode; label: string; description: string; icon: string; experimental?: boolean }[] = [
   { id: "classic", label: "Classic", description: "Take turns choosing Truth or Dare", icon: "Sparkles" },
   { id: "random", label: "Random", description: "The game chooses Truth or Dare for you", icon: "Shuffle" },
   { id: "spin_wheel", label: "Spin Wheel", description: "Spin to reveal your fate", icon: "Disc3" },
-  { id: "survival", label: "Survival", description: "Fail or skip and you're out", icon: "Flame" },
-  { id: "couples", label: "Couples", description: "Paired challenges for two", icon: "Heart" },
-  { id: "team_battle", label: "Team Battle", description: "Compete in teams for glory", icon: "Swords" },
-  { id: "last_standing", label: "Last Standing", description: "Last player remaining wins", icon: "Crown" },
+  {
+    id: "survival",
+    label: "Survival",
+    description: "Experimental — skip or fail and you're out (elimination WIP)",
+    icon: "Flame",
+    experimental: true,
+  },
+  {
+    id: "couples",
+    label: "Couples",
+    description: "Experimental — paired challenges (partner targeting WIP)",
+    icon: "Heart",
+    experimental: true,
+  },
+  {
+    id: "team_battle",
+    label: "Team Battle",
+    description: "Experimental — team labels only (scoring WIP)",
+    icon: "Swords",
+    experimental: true,
+  },
+  {
+    id: "last_standing",
+    label: "Last Standing",
+    description: "Experimental — last player remaining (elimination WIP)",
+    icon: "Crown",
+    experimental: true,
+  },
 ];
 
 export const AVATAR_COLORS = [
@@ -306,7 +330,7 @@ export type AckResult<T> =
   | { ok: false; error: { code: string; message: string } };
 
 export function createDefaultSettings(overrides?: Partial<RoomSettings>): RoomSettings {
-  return {
+  const base: RoomSettings = {
     maxPlayers: DEFAULT_MAX_PLAYERS,
     timerSeconds: DEFAULT_TIMER_SECONDS,
     skippingEnabled: true,
@@ -319,8 +343,16 @@ export function createDefaultSettings(overrides?: Partial<RoomSettings>): RoomSe
     voiceEnabled: false,
     chatEnabled: true,
     theme: "midnight",
-    ...overrides,
   };
+  if (!overrides) return base;
+  // Skip undefined so callers can pass `{ maxPlayers: undefined }` without wiping defaults.
+  for (const key of Object.keys(overrides) as (keyof RoomSettings)[]) {
+    const value = overrides[key];
+    if (value !== undefined) {
+      (base as unknown as Record<string, unknown>)[key as string] = value;
+    }
+  }
+  return base;
 }
 
 /** Normalize legacy packs that used level/text into PromptRecord */
@@ -361,3 +393,6 @@ export function slugCategory(value: string): string {
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_|_$/g, "");
 }
+
+export * from "./limits";
+export * from "./validate";

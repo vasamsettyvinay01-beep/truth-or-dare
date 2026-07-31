@@ -26,4 +26,6 @@ services:
       - key: CLIENT_ORIGIN
         value: https://truth-or-dare-gray.vercel.app
       - key: CLIENT_ORIGINS
-        value: https://truth-or-dare-gray.vercel.app,https://truth-or-dare.vercel.app,https://*.vercel.app
+        value: https://truth-or-dare-gray.vercel.app,https://truth-or-dare-*-vasamsettyvinay01-beeps-projects.vercel.app
+      - key: NODE_ENV
+        value: production
