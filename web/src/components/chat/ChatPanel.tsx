@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Pin, Send } from "lucide-react";
-import type { ChatMessage } from "@tod/shared";
+import { sanitizeAvatarColor, type ChatMessage } from "@tod/shared";
 import { Button } from "../ui/Button";
 import { cn } from "@/lib/utils";
 
@@ -81,7 +81,10 @@ export function ChatPanel({
           >
             {m.type === "chat" && (
               <div className="mb-0.5 flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold" style={{ color: m.color }}>
+                <span
+                  className="text-xs font-semibold"
+                  style={{ color: sanitizeAvatarColor(m.color) }}
+                >
                   {m.nickname}
                 </span>
                 {isHost && (

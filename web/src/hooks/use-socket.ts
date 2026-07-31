@@ -27,6 +27,9 @@ const FRIENDLY_ERRORS: Record<string, string> = {
   NO_PROMPTS: "No prompts left for these filters. Enable more categories.",
   ROOM_CLOSED: "The host closed this room.",
   INVALID_CODE: "Room codes are 6 characters, like ABC123.",
+  RATE_LIMITED: "You're going too fast — wait a second and try again.",
+  SERVER_FULL: "The server is busy. Try again in a moment.",
+  BANNED: "You've been removed from this room.",
 };
 
 export function friendlyError(message: string, code?: string) {
@@ -56,17 +59,66 @@ export function useSocketLifecycle() {
 
     setStatus("connecting");
     const socket = connectSocket();
+    let failures = 0;
+    const FAIL_LIMIT = 6;
 
     const onConnect = () => {
+      failures = 0;
       setFatalError(null);
       setStatus("connected");
+
+      // Socket.IO issues a new socket.id after a transport drop. Re-attach the
+      // seat with the stored reconnect token so the player isn't silently detached.
+      const state = useGameStore.getState();
+      const room = state.room;
+      const token = state.reconnectToken;
+      if (room?.code && token && state.playerId) {
+        const sessionNickname =
+          room.players.find((p) => p.id === state.playerId)?.nickname || "Player";
+        socket.emit(
+          "room:join",
+          {
+            code: room.code,
+            nickname: sessionNickname,
+            reconnectToken: token,
+          },
+          (res) => {
+            if (res?.ok) {
+              setRoom(res.data.room);
+              useGameStore.getState().setSession(res.data.playerId, res.data.reconnectToken);
+              saveSession({
+                playerId: res.data.playerId,
+                reconnectToken: res.data.reconnectToken,
+                nickname: sessionNickname,
+                code: res.data.room.code,
+              });
+            }
+          }
+        );
+      }
     };
     const onDisconnect = (reason: string) => {
       // "io client disconnect" is our own leaveRoom, not a network problem.
       setStatus(reason === "io client disconnect" ? "disconnected" : "reconnecting");
     };
-    const onConnectError = () => setStatus("reconnecting");
-    const onReconnectAttempt = () => setStatus("reconnecting");
+    const onConnectError = (err: Error) => {
+      failures += 1;
+      // Endless silent retries look identical to a dead deploy. After a few
+      // attempts, surface the real problem so the player can act on it.
+      if (failures >= FAIL_LIMIT && !useGameStore.getState().room) {
+        setFatalError(
+          err?.message
+            ? `Can't reach the game server (${err.message}).`
+            : "Can't reach the game server. Check that the realtime API is running."
+        );
+        setStatus("unavailable");
+        return;
+      }
+      setStatus("reconnecting");
+    };
+    const onReconnectAttempt = () => {
+      if (useGameStore.getState().status !== "unavailable") setStatus("reconnecting");
+    };
     const onRoomState = (room: RoomPublic) => setRoom(room);
     const onChat = (message: ChatMessage) => appendChat(message);
     const onPack = (pack: PromptPack) => setPromptPack(pack);
@@ -76,7 +128,13 @@ export function useSocketLifecycle() {
       const code = useGameStore.getState().room?.code;
       if (code) clearSession(code);
       else clearAllSessions();
-      setError(reason === "empty" ? "Everyone left, so the room closed." : "The host closed this room.");
+      if (reason === "kicked") {
+        setError("You've been removed from this room.");
+      } else if (reason === "shutdown") {
+        setError("The game server is restarting. Rejoin in a moment.");
+      } else {
+        setError(reason === "empty" ? "Everyone left, so the room closed." : "The host closed this room.");
+      }
       reset();
     };
     const onConfetti = () => bumpConfetti();

@@ -23,6 +23,8 @@ function JoinForm() {
   const actions = useGameActions();
   const connected = useGameStore((s) => s.connected);
   const connecting = useGameStore((s) => s.connecting);
+  const status = useGameStore((s) => s.status);
+  const fatalError = useGameStore((s) => s.fatalError);
   const [code, setCode] = useState("");
   const [nickname, setNickname] = useState("");
   const [color, setColor] = useState("#22d3ee");
@@ -96,13 +98,23 @@ function JoinForm() {
         type="submit"
         size="lg"
         className="w-full"
-        disabled={busy || !nickname.trim() || code.length < 4}
+        disabled={busy || !nickname.trim() || code.length < 4 || status === "unavailable"}
       >
-        {busy ? "Joining…" : connected ? "Join room" : "Join room (connecting…)"}
+        {busy
+          ? "Joining…"
+          : status === "unavailable"
+            ? "Server unavailable"
+            : connected
+              ? "Join room"
+              : "Join room (connecting…)"}
       </Button>
       {!connected && (
         <p className="text-center text-xs text-muted" role="status">
-          {connecting ? "Reaching the game server…" : "Waiting for the game server."}
+          {status === "unavailable"
+            ? fatalError || "Can't reach the game server right now."
+            : connecting
+              ? "Reaching the game server…"
+              : "Waiting for the game server."}
         </p>
       )}
     </form>

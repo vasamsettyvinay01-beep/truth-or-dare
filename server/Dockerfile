@@ -5,17 +5,19 @@ COPY package.json package-lock.json ./
 COPY shared/package.json ./shared/
 COPY server/package.json ./server/
 COPY web/package.json ./web/
-RUN npm ci --omit=dev=false
+# Workspaces hoist to /app/node_modules — don't expect per-package folders.
+RUN npm ci
 
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/shared/node_modules ./shared/node_modules
-COPY --from=deps /app/server/node_modules ./server/node_modules
-COPY . .
-RUN npm run build -w shared && npm run build -w server \
-  && mkdir -p server/dist/prompts \
-  && cp -r server/prompts/*.json server/dist/../prompts/ 2>/dev/null || true
+COPY --from=deps /app/package.json /app/package-lock.json ./
+COPY --from=deps /app/shared/package.json ./shared/
+COPY --from=deps /app/server/package.json ./server/
+COPY --from=deps /app/web/package.json ./web/
+COPY shared ./shared
+COPY server ./server
+RUN npm run build -w shared && npm run build -w server
 
 FROM node:20-alpine AS runner
 WORKDIR /app

@@ -1,4 +1,21 @@
+import os from "node:os";
 import type { NextConfig } from "next";
+
+/**
+ * Next refuses `/_next/*` requests whose Origin it does not recognise, which is
+ * every request from a phone opening the dev server over Wi-Fi. Trusting this
+ * machine's own addresses covers whatever the router handed out today without
+ * opening the door to arbitrary hosts.
+ */
+function localDevOrigins() {
+  const origins = new Set<string>(["*.local", os.hostname()]);
+  for (const addresses of Object.values(os.networkInterfaces())) {
+    for (const address of addresses ?? []) {
+      if (!address.internal && address.address) origins.add(address.address);
+    }
+  }
+  return [...origins];
+}
 
 // NEXT_PUBLIC_* values are inlined at build time, so a missing socket URL
 // produces a bundle that can never reach the game server. Surface it here
@@ -16,17 +33,49 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@tod/shared"],
   poweredByHeader: false,
+  allowedDevOrigins: localDevOrigins(),
   compiler: {
     // Keep warnings and errors for real diagnostics; drop the noise.
     removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,
   },
   async headers() {
+    const socket = (process.env.NEXT_PUBLIC_SOCKET_URL || "").replace(/\/+$/, "");
+    const connectSrc = ["'self'", "ws:", "wss:", "http://localhost:4001", "ws://localhost:4001"];
+    if (socket) {
+      connectSrc.push(socket);
+      try {
+        const u = new URL(socket);
+        connectSrc.push(`wss://${u.host}`, `https://${u.host}`);
+      } catch {
+        /* ignore */
+      }
+    }
+
     return [
       {
         source: "/:path*",
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "X-Frame-Options", value: "DENY" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=(), payment=()",
+          },
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              `connect-src ${connectSrc.join(" ")}`,
+              "img-src 'self' data: blob:",
+              "style-src 'self' 'unsafe-inline'",
+              "font-src 'self' data:",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join("; "),
+          },
         ],
       },
     ];

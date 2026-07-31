@@ -1,0 +1,11 @@
+# Railway config for the Socket.IO realtime server.
+# Frontend stays on Vercel — this host only runs the persistent Node process.
+
+[build]
+dockerfilePath = "server/Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

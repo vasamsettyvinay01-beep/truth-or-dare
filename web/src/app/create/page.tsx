@@ -18,6 +18,8 @@ export default function CreatePage() {
   const actions = useGameActions();
   const connecting = useGameStore((s) => s.connecting);
   const connected = useGameStore((s) => s.connected);
+  const status = useGameStore((s) => s.status);
+  const fatalError = useGameStore((s) => s.fatalError);
   const [nickname, setNickname] = useState("");
   const [color, setColor] = useState("#a78bfa");
   const [maxPlayers, setMaxPlayers] = useState(12);
@@ -102,17 +104,39 @@ export default function CreatePage() {
                       : "border-white/10 bg-white/[0.03]"
                   )}
                 >
-                  <span className="font-medium">{m.label}</span>
+                  <span className="font-medium">
+                    {m.label}
+                    {m.experimental ? (
+                      <span className="ml-2 text-[10px] uppercase tracking-wider text-amber-200/80">
+                        Exp
+                      </span>
+                    ) : null}
+                  </span>
                 </button>
               ))}
             </div>
           </div>
-          <Button type="submit" size="lg" className="w-full" disabled={busy || !nickname.trim()}>
-            {busy ? "Opening room…" : connected ? "Create room" : "Create room (connecting…)"}
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            disabled={busy || !nickname.trim() || status === "unavailable"}
+          >
+            {busy
+              ? "Opening room…"
+              : status === "unavailable"
+                ? "Server unavailable"
+                : connected
+                  ? "Create room"
+                  : "Create room (connecting…)"}
           </Button>
           {!connected && (
             <p className="text-center text-xs text-muted" role="status">
-              {connecting ? "Reaching the game server…" : "Waiting for the game server."}
+              {status === "unavailable"
+                ? fatalError || "Can't reach the game server right now."
+                : connecting
+                  ? "Reaching the game server…"
+                  : "Waiting for the game server."}
             </p>
           )}
         </form>

@@ -1,8 +1,12 @@
 "use client";
 
+import { AVATAR_COLORS, type Player } from "@tod/shared";
 import { cn } from "@/lib/utils";
 import { Crown, WifiOff } from "lucide-react";
-import type { Player } from "@tod/shared";
+
+function safeColor(color: string) {
+  return (AVATAR_COLORS as readonly string[]).includes(color) ? color : AVATAR_COLORS[0];
+}
 
 export function Avatar({
   player,
@@ -14,6 +18,7 @@ export function Avatar({
   showHost?: boolean;
 }) {
   const sizes = { sm: "h-8 w-8 text-xs", md: "h-11 w-11 text-sm", lg: "h-16 w-16 text-xl" };
+  const color = safeColor(player.color);
   return (
     <div className="relative">
       <div
@@ -24,7 +29,7 @@ export function Avatar({
           !player.isConnected && "opacity-50"
         )}
         style={{
-          background: `linear-gradient(145deg, ${player.color}, color-mix(in oklab, ${player.color} 55%, black))`,
+          background: `linear-gradient(145deg, ${color}, color-mix(in oklab, ${color} 55%, black))`,
         }}
       >
         {player.nickname.slice(0, 2).toUpperCase()}

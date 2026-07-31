@@ -140,7 +140,14 @@ export function AdminPanel({
                   : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
               )}
             >
-              <p className="text-sm font-medium">{m.label}</p>
+              <p className="text-sm font-medium">
+                {m.label}
+                {m.experimental ? (
+                  <span className="ml-2 text-[10px] uppercase tracking-wider text-amber-200/80">
+                    Experimental
+                  </span>
+                ) : null}
+              </p>
               <p className="mt-1 text-xs text-muted">{m.description}</p>
             </button>
           ))}
@@ -182,13 +189,13 @@ export function AdminPanel({
           [
             ["skippingEnabled", "Skipping"],
             ["chatEnabled", "Chat"],
-            ["voiceEnabled", "Voice"],
             ["remoteOnly", "Remote-only dares"],
           ] as const
         ).map(([key, label]) => (
           <button
             key={key}
             type="button"
+            aria-pressed={settings[key]}
             onClick={() => onChange({ [key]: !settings[key] })}
             className={cn(
               "inline-flex min-h-[40px] items-center rounded-full px-3.5 text-xs",
@@ -200,6 +207,15 @@ export function AdminPanel({
         ))}
         <button
           type="button"
+          disabled
+          title="WebRTC voice is not wired up yet"
+          className="inline-flex min-h-[40px] cursor-not-allowed items-center rounded-full bg-white/5 px-3.5 text-xs text-muted opacity-60"
+        >
+          Voice: Coming soon
+        </button>
+        <button
+          type="button"
+          aria-pressed={settings.playerOrder === "random"}
           onClick={() =>
             onChange({ playerOrder: settings.playerOrder === "random" ? "sequential" : "random" })
           }
@@ -292,22 +308,10 @@ export function AdminPanel({
       </section>
 
       <section className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.18em] text-muted">Theme</p>
-        <div className="flex flex-wrap gap-2">
-          {(["midnight", "neon", "ember", "aurora"] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => onChange({ theme: t })}
-              className={cn(
-                "inline-flex min-h-[40px] items-center rounded-full px-3.5 text-xs capitalize",
-                settings.theme === t ? "bg-white text-ink" : "bg-white/5 text-muted"
-              )}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+        <p className="text-xs uppercase tracking-[0.18em] text-muted">Theme (saved for later)</p>
+        <p className="text-xs text-muted">
+          Themes are stored on the room but the UI palette is still fixed. Coming soon.
+        </p>
       </section>
 
       <section className="space-y-3">
