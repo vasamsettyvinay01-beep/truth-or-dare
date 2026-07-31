@@ -14,10 +14,14 @@
     "dev:web": "npm run dev -w web",
     "build": "npm run build -w shared && npm run build -w server && npm run build -w web",
     "start": "concurrently -n server,web -c magenta,cyan \"npm run start -w server\" \"npm run start -w web\"",
-    "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w web"
+    "lint": "npm run lint -w web",
+    "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w web",
+    "test": "node scripts/e2e-flow.mjs",
+    "test:mobile": "node scripts/mobile-audit.mjs"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "playwright": "^1.62.1"
   },
   "overrides": {
     "react": "19.2.8",

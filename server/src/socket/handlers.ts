@@ -277,8 +277,10 @@ export function registerSocketHandlers(io: AppServer) {
       }
     });
 
+    // A dropped transport is not a departure: the player keeps their seat and
+    // reconnect token until the room manager's grace period expires.
     socket.on("disconnect", () => {
-      const result = roomManager.leaveBySocket(socket.id);
+      const result = roomManager.disconnectBySocket(socket.id);
       if (!result) return;
       if (result.destroyed) {
         io.to(result.roomCode).emit("room:destroyed", "empty");

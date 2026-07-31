@@ -1,5 +1,12 @@
-# Render Blueprint — Socket.IO API for Truth or Dare
+# Render Blueprint — Socket.IO realtime server for Truth or Dare.
+#
+# The Next.js frontend lives on Vercel. Vercel's serverless functions cannot
+# hold an open WebSocket, so the realtime server needs a persistent host.
+#
 # One-click: https://dashboard.render.com/blueprints/new?repo=https://github.com/vasamsettyvinay01-beep/truth-or-dare
+#
+# After the service is live, set NEXT_PUBLIC_SOCKET_URL in Vercel to the
+# https:// URL Render assigns, then redeploy the frontend.
 
 services:
   - type: web
@@ -14,7 +21,9 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
+      # Browser origins permitted to open a socket. A single-label wildcard
+      # keeps Vercel preview deployments working.
       - key: CLIENT_ORIGIN
         value: https://truth-or-dare-gray.vercel.app
       - key: CLIENT_ORIGINS
-        value: https://truth-or-dare-gray.vercel.app,https://truth-or-dare-vasamsettyvinay01-beeps-projects.vercel.app,https://truth-or-dare.vercel.app
+        value: https://truth-or-dare-gray.vercel.app,https://truth-or-dare.vercel.app,https://*.vercel.app

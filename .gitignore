@@ -1,12 +1,24 @@
 # Truth or Dare
 
-*.log
-.env*.local
-!.env.example
+# Dependencies and build output
 node_modules
 dist
 .next
 .turbo
-.DS_Store
 *.tsbuildinfo
+
+# Environment files — never commit real credentials
+.env
+.env.*
+!.env.example
+
+# Local tooling
+*.log
+.vercel
+.DS_Store
 client/
+
+# Test artifacts
+scripts/.shots/
+playwright-report/
+test-results/

@@ -13,6 +13,7 @@ import {
 import { Download, Search, Upload } from "lucide-react";
 import { Button } from "../ui/Button";
 import { cn, levelLabel } from "@/lib/utils";
+import { useGameStore } from "@/store/game-store";
 
 export function AdminPanel({
   settings,
@@ -109,7 +110,7 @@ export function AdminPanel({
   };
 
   return (
-    <div className="glass space-y-6 rounded-3xl p-5">
+    <div className="glass space-y-6 overflow-hidden rounded-3xl p-4 sm:p-5">
       <div>
         <h3 className="font-display text-lg">Host Controls</h3>
         <p className="text-sm text-muted">
@@ -131,8 +132,9 @@ export function AdminPanel({
               key={m.id}
               type="button"
               onClick={() => onChange({ gameMode: m.id as GameMode })}
+              aria-pressed={settings.gameMode === m.id}
               className={cn(
-                "rounded-2xl border px-3 py-3 text-left transition",
+                "min-h-[48px] rounded-2xl border px-3 py-3 text-left transition",
                 settings.gameMode === m.id
                   ? "border-[color:var(--color-accent)]/50 bg-[color:var(--color-accent)]/10"
                   : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
@@ -154,7 +156,7 @@ export function AdminPanel({
             max={20}
             value={settings.maxPlayers}
             onChange={(e) => onChange({ maxPlayers: Number(e.target.value) })}
-            className="w-full"
+            className="h-11 w-full accent-[color:var(--color-accent)]"
           />
           <span className="text-muted">{settings.maxPlayers}</span>
         </label>
@@ -167,7 +169,7 @@ export function AdminPanel({
             step={5}
             value={settings.timerSeconds}
             onChange={(e) => onChange({ timerSeconds: Number(e.target.value) })}
-            className="w-full"
+            className="h-11 w-full accent-[color:var(--color-accent)]"
           />
           <span className="text-muted">
             {settings.timerSeconds === 0 ? "Off" : `${settings.timerSeconds}s`}
@@ -189,7 +191,7 @@ export function AdminPanel({
             type="button"
             onClick={() => onChange({ [key]: !settings[key] })}
             className={cn(
-              "rounded-full px-3 py-1.5 text-xs",
+              "inline-flex min-h-[40px] items-center rounded-full px-3.5 text-xs",
               settings[key] ? "bg-emerald-400/15 text-emerald-300" : "bg-white/5 text-muted"
             )}
           >
@@ -216,7 +218,7 @@ export function AdminPanel({
               type="button"
               onClick={() => toggleLevel(l.id)}
               className={cn(
-                "rounded-full px-3 py-1.5 text-xs",
+                "inline-flex min-h-[40px] items-center rounded-full px-3.5 text-xs",
                 settings.enabledLevels.includes(l.id) ? "text-ink" : "bg-white/5 text-muted"
               )}
               style={settings.enabledLevels.includes(l.id) ? { background: l.color } : undefined}
@@ -230,17 +232,17 @@ export function AdminPanel({
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs uppercase tracking-[0.18em] text-muted">Categories</p>
-          <div className="flex gap-2">
+          <div className="flex gap-1">
             <button
               type="button"
-              className="text-[11px] text-muted hover:text-cream"
+              className="inline-flex min-h-[40px] items-center rounded-full px-3 text-[11px] text-muted sm:hover:text-cream"
               onClick={() => onChange({ enabledCategories: [...categories] })}
             >
               Enable all
             </button>
             <button
               type="button"
-              className="text-[11px] text-muted hover:text-cream"
+              className="inline-flex min-h-[40px] items-center rounded-full px-3 text-[11px] text-muted sm:hover:text-cream"
               onClick={() => onChange({ enabledCategories: categories.slice(0, 1) })}
             >
               Minimum
@@ -254,7 +256,7 @@ export function AdminPanel({
               type="button"
               onClick={() => toggleCategory(c)}
               className={cn(
-                "rounded-full px-3 py-1.5 text-xs capitalize",
+                "inline-flex min-h-[40px] items-center rounded-full px-3.5 text-xs capitalize",
                 settings.enabledCategories.includes(c)
                   ? "bg-[color:var(--color-accent-2)]/20 text-violet-200"
                   : "bg-white/5 text-muted"
@@ -275,9 +277,10 @@ export function AdminPanel({
                   min={0.25}
                   max={3}
                   step={0.25}
+                  aria-label={`Weight for ${c.replace(/_/g, " ")}`}
                   value={settings.categoryWeights?.[c] ?? 1}
                   onChange={(e) => setCategoryWeight(c, Number(e.target.value))}
-                  className="flex-1"
+                  className="h-10 min-w-0 flex-1 accent-[color:var(--color-accent)]"
                 />
                 <span className="w-8 text-right text-muted">
                   {(settings.categoryWeights?.[c] ?? 1).toFixed(2).replace(/\.00$/, "")}
@@ -297,7 +300,7 @@ export function AdminPanel({
               type="button"
               onClick={() => onChange({ theme: t })}
               className={cn(
-                "rounded-full px-3 py-1.5 text-xs capitalize",
+                "inline-flex min-h-[40px] items-center rounded-full px-3.5 text-xs capitalize",
                 settings.theme === t ? "bg-white text-ink" : "bg-white/5 text-muted"
               )}
             >
@@ -311,11 +314,17 @@ export function AdminPanel({
         <p className="text-xs uppercase tracking-[0.18em] text-muted">Prompt browser</p>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+          <label htmlFor="prompt-search" className="sr-only">
+            Search prompts
+          </label>
           <input
+            id="prompt-search"
+            type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search prompts, tags, categories…"
-            className="h-11 w-full rounded-2xl border border-white/10 bg-white/5 pl-10 pr-4 text-sm outline-none focus:border-[color:var(--color-accent)]/40"
+            // text-base keeps iOS from zooming the page on focus.
+            className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 pl-10 pr-4 text-base outline-none focus:border-[color:var(--color-accent)]/40"
           />
         </div>
         <div className="flex flex-wrap gap-2">
@@ -325,7 +334,7 @@ export function AdminPanel({
               type="button"
               onClick={() => setFilterType(t)}
               className={cn(
-                "rounded-full px-3 py-1 text-xs capitalize",
+                "inline-flex min-h-[40px] items-center rounded-full px-3.5 text-xs capitalize",
                 filterType === t ? "bg-white text-ink" : "bg-white/5 text-muted"
               )}
             >
@@ -338,7 +347,7 @@ export function AdminPanel({
               type="button"
               onClick={() => setFilterDifficulty(d)}
               className={cn(
-                "rounded-full px-3 py-1 text-xs capitalize",
+                "inline-flex min-h-[40px] items-center rounded-full px-3.5 text-xs capitalize",
                 filterDifficulty === d ? "bg-white/20 text-cream" : "bg-white/5 text-muted"
               )}
             >
@@ -351,7 +360,7 @@ export function AdminPanel({
               type="button"
               onClick={() => setRemoteFilter(r)}
               className={cn(
-                "rounded-full px-3 py-1 text-xs capitalize",
+                "inline-flex min-h-[40px] items-center rounded-full px-3.5 text-xs capitalize",
                 remoteFilter === r ? "bg-emerald-400/20 text-emerald-200" : "bg-white/5 text-muted"
               )}
             >
@@ -401,7 +410,9 @@ export function AdminPanel({
             try {
               await importFile(file);
             } catch {
-              alert("Could not import prompt pack. Expect a pack object or prompt array.");
+              useGameStore
+                .getState()
+                .setError("Could not read that pack. Expected a pack object or an array of prompts.");
             }
             e.target.value = "";
           }}

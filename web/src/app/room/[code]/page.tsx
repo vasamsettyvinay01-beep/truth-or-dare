@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import { RoomExperience } from "@/components/game/RoomExperience";
 import { useGameActions } from "@/hooks/use-socket";
 import { useGameStore } from "@/store/game-store";
 import { loadSession } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
-import Link from "next/link";
+
+type Status = "idle" | "reconnecting" | "need-join" | "ready";
 
 export default function RoomPage() {
   const params = useParams<{ code: string }>();
@@ -16,14 +19,19 @@ export default function RoomPage() {
   const room = useGameStore((s) => s.room);
   const connected = useGameStore((s) => s.connected);
   const actions = useGameActions();
-  const [status, setStatus] = useState<"idle" | "reconnecting" | "need-join" | "ready">("idle");
+  const [status, setStatus] = useState<Status>("idle");
+  const attemptedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!connected || !code) return;
     if (room?.code === code) {
       setStatus("ready");
       return;
     }
+    if (!connected || !code) return;
+
+    // Guard against a second rejoin (React strict mode, re-renders, or a
+    // socket reconnect) creating a duplicate player.
+    if (attemptedRef.current === code) return;
 
     const session = loadSession(code);
     if (!session?.reconnectToken) {
@@ -31,6 +39,7 @@ export default function RoomPage() {
       return;
     }
 
+    attemptedRef.current = code;
     setStatus("reconnecting");
     actions
       .joinRoom({
@@ -39,16 +48,23 @@ export default function RoomPage() {
         reconnectToken: session.reconnectToken,
       })
       .then(() => setStatus("ready"))
-      .catch(() => setStatus("need-join"));
-  }, [connected, code, room?.code]); // eslint-disable-line react-hooks/exhaustive-deps
+      .catch(() => {
+        attemptedRef.current = null;
+        setStatus("need-join");
+      });
+  }, [connected, code, room?.code, actions]);
 
   if (status === "need-join") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
-        <h1 className="font-display text-3xl">Join room {code}</h1>
-        <p className="text-muted">Enter a nickname to get in.</p>
-        <Link href={`/join?code=${code}`}>
-          <Button size="lg">Continue</Button>
+      <div className="safe-area flex min-h-screen-safe flex-col items-center justify-center gap-4 px-6 text-center">
+        <h1 className="font-display text-2xl sm:text-3xl">Join room {code}</h1>
+        <p className="max-w-sm text-sm text-muted">
+          Enter a nickname to get in. Nothing is saved after the room closes.
+        </p>
+        <Link href={`/join?code=${code}`} className="w-full max-w-xs">
+          <Button size="lg" className="w-full">
+            Continue
+          </Button>
         </Link>
         <Button variant="ghost" onClick={() => router.push("/")}>
           Home
@@ -59,8 +75,18 @@ export default function RoomPage() {
 
   if (!room || room.code !== code) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-muted">
-        {status === "reconnecting" ? "Reconnecting…" : "Entering room…"}
+      <div
+        className="safe-area flex min-h-screen-safe flex-col items-center justify-center gap-3 px-6 text-center text-muted"
+        role="status"
+        aria-live="polite"
+      >
+        <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+        <p>{status === "reconnecting" ? "Reconnecting you to the room…" : "Entering room…"}</p>
+        {!connected && (
+          <p className="max-w-xs text-xs">
+            Waiting for the game server. This keeps retrying on its own.
+          </p>
+        )}
       </div>
     );
   }

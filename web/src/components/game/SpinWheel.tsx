@@ -12,7 +12,7 @@ export function SpinWheel({ onSpin, disabled }: { onSpin: () => void; disabled?:
       <div className="relative">
         <div className="absolute left-1/2 top-0 z-10 h-0 w-0 -translate-x-1/2 -translate-y-1 border-l-[10px] border-r-[10px] border-t-[18px] border-l-transparent border-r-transparent border-t-cream" />
         <motion.div
-          className="relative h-56 w-56 rounded-full border-4 border-white/10 shadow-[0_0_60px_rgba(124,92,255,0.25)]"
+          className="relative h-[min(56vw,14rem)] w-[min(56vw,14rem)] rounded-full border-4 border-white/10 shadow-[0_0_60px_rgba(124,92,255,0.25)]"
           animate={{ rotate: angle }}
           transition={{ duration: 3.2, ease: [0.15, 0.8, 0.1, 1] }}
           style={{
@@ -40,9 +40,9 @@ export function SpinWheel({ onSpin, disabled }: { onSpin: () => void; disabled?:
         type="button"
         disabled={disabled}
         onClick={onSpin}
-        className="glow-accent rounded-full bg-[linear-gradient(135deg,#ff4d6d,#7c5cff)] px-8 py-3 font-display text-sm uppercase tracking-[0.2em] disabled:opacity-40"
+        className="glow-accent tap-target rounded-full bg-[linear-gradient(135deg,#ff4d6d,#7c5cff)] px-8 py-3.5 font-display text-sm uppercase tracking-[0.2em] active:scale-95 disabled:opacity-40"
       >
-        Spin the Wheel
+        {disabled ? "Waiting…" : "Spin the Wheel"}
       </button>
     </div>
   );

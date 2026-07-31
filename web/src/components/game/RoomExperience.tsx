@@ -6,7 +6,8 @@ import { useMemo, useState } from "react";
 import { GAME_MODES } from "@tod/shared";
 import { useGameStore } from "@/store/game-store";
 import { useGameActions } from "@/hooks/use-socket";
-import { inviteUrl, levelLabel } from "@/lib/utils";
+import { inviteUrl, levelLabel, shareOrCopy } from "@/lib/utils";
+import { ConnectionBadge } from "../ui/ConnectionStatus";
 import { Button } from "../ui/Button";
 import { PlayerCard } from "../lobby/PlayerCard";
 import { AdminPanel } from "../lobby/AdminPanel";
@@ -15,15 +16,17 @@ import { LevelSelect } from "../game/LevelSelect";
 import { ChallengeCard } from "../game/ChallengeCard";
 import { SpinWheel } from "../game/SpinWheel";
 
+type RoomTab = "play" | "players" | "settings" | "chat";
+
 export function RoomExperience() {
   const room = useGameStore((s) => s.room);
   const playerId = useGameStore((s) => s.playerId);
   const promptPack = useGameStore((s) => s.promptPack);
-  const connected = useGameStore((s) => s.connected);
+  const setError = useGameStore((s) => s.setError);
   const actions = useGameActions();
   const [copied, setCopied] = useState(false);
   const [voiceOn, setVoiceOn] = useState(false);
-  const [tab, setTab] = useState<"play" | "players" | "settings" | "chat">("play");
+  const [tab, setTab] = useState<RoomTab>("play");
 
   const me = useMemo(() => room?.players.find((p) => p.id === playerId), [room, playerId]);
   const isHost = me?.isHost;
@@ -37,7 +40,12 @@ export function RoomExperience() {
   if (!room || !me) return null;
 
   const copyInvite = async () => {
-    await navigator.clipboard.writeText(inviteUrl(room.code));
+    const result = await shareOrCopy(inviteUrl(room.code));
+    if (result === "failed") {
+      setError(`Couldn't copy automatically. Share this code instead: ${room.code}`);
+      return;
+    }
+    if (result === "cancelled") return;
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
@@ -47,13 +55,22 @@ export function RoomExperience() {
       ? promptPack.categories
       : [...new Set(promptPack?.prompts.map((p) => p.category) || [])];
 
+  const mobileTabs: RoomTab[] = ["play", "players"];
+  if (room.settings.chatEnabled) mobileTabs.push("chat");
+  if (isHost) mobileTabs.push("settings");
+
+  const activeTab: RoomTab = mobileTabs.includes(tab) ? tab : "play";
+  const showMain = activeTab === "play" || activeTab === "settings";
+  const showPlayers = activeTab === "players";
+  const showChat = activeTab === "chat";
+
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-8">
-      <header className="glass flex flex-wrap items-center justify-between gap-4 rounded-3xl px-5 py-4">
-        <div>
+    <div className="safe-area mx-auto flex min-h-screen-safe w-full max-w-7xl flex-col gap-4 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6 md:px-8">
+      <header className="glass flex flex-wrap items-center justify-between gap-3 rounded-3xl px-4 py-3 sm:px-5 sm:py-4">
+        <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-[0.25em] text-muted">Truth or Dare</p>
-          <div className="mt-1 flex flex-wrap items-center gap-3">
-            <h1 className="font-display text-2xl tracking-wide">{room.code}</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2 sm:gap-3">
+            <h1 className="font-display text-xl tracking-wide sm:text-2xl">{room.code}</h1>
             <span className="rounded-full bg-white/5 px-3 py-1 text-xs text-muted">
               {modeMeta?.label}
             </span>
@@ -62,13 +79,13 @@ export function RoomExperience() {
                 {levelLabel(room.level)}
               </span>
             )}
-            <span className={`h-2 w-2 rounded-full ${connected ? "bg-emerald-400" : "bg-amber-400"}`} />
+            <ConnectionBadge />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="secondary" size="sm" onClick={copyInvite}>
-            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            Invite
+            {copied ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+            {copied ? "Copied" : "Invite"}
           </Button>
           {room.settings.voiceEnabled && (
             <Button
@@ -84,43 +101,54 @@ export function RoomExperience() {
                 }
               }}
             >
-              {voiceOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+              {voiceOn ? <Mic className="h-4 w-4" aria-hidden /> : <MicOff className="h-4 w-4" aria-hidden />}
               Voice
             </Button>
           )}
           <Button variant="ghost" size="sm" onClick={() => actions.leaveRoom()}>
-            <LogOut className="h-4 w-4" /> Leave
+            <LogOut className="h-4 w-4" aria-hidden /> Leave
           </Button>
         </div>
       </header>
 
-      <div className="flex gap-2 overflow-x-auto md:hidden">
-        {(["play", "players", "settings", "chat"] as const).map((t) => (
+      {/* One panel at a time below lg, where a three-column layout cannot fit. */}
+      <nav
+        aria-label="Room sections"
+        className="scrollbar-thin -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:hidden"
+      >
+        {mobileTabs.map((t) => (
           <button
             key={t}
             type="button"
+            aria-current={tab === t ? "page" : undefined}
             onClick={() => setTab(t)}
-            className={`rounded-full px-4 py-2 text-sm capitalize ${
+            className={`tap-target shrink-0 rounded-full px-4 text-sm capitalize transition ${
               tab === t ? "bg-white text-ink" : "bg-white/5 text-muted"
             }`}
           >
             {t}
           </button>
         ))}
-      </div>
+      </nav>
 
-      <div className="grid flex-1 gap-6 lg:grid-cols-[1fr_340px]">
-        <main className={`space-y-6 ${tab !== "play" && tab !== "settings" ? "hidden md:block" : ""}`}>
+      <div className="grid flex-1 gap-4 sm:gap-6 lg:grid-cols-[1fr_340px]">
+        <main className={`space-y-6 ${showMain ? "" : "hidden lg:block"}`}>
           {room.phase === "lobby" && (
             <div className="space-y-6">
-              <div className="glass rounded-[2rem] p-8 text-center">
+              <div
+                className={`glass rounded-[1.75rem] p-6 text-center sm:rounded-[2rem] sm:p-8 ${
+                  activeTab === "settings" ? "hidden lg:block" : ""
+                }`}
+              >
                 <p className="text-xs uppercase tracking-[0.25em] text-muted">Lobby</p>
-                <h2 className="mt-3 font-display text-4xl text-gradient">Gather your crew</h2>
-                <p className="mx-auto mt-3 max-w-md text-muted">
+                <h2 className="mt-3 font-display text-3xl text-gradient sm:text-4xl">
+                  Gather your crew
+                </h2>
+                <p className="mx-auto mt-3 max-w-md text-sm text-muted sm:text-base">
                   Share the code <span className="font-mono text-cream">{room.code}</span> or invite link.
                   Everyone ready? Host starts the night.
                 </p>
-                <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                <div className="mt-6 flex flex-col items-stretch gap-3 sm:mt-8 sm:flex-row sm:items-center sm:justify-center">
                   <Button
                     variant={me.isReady ? "secondary" : "primary"}
                     size="lg"
@@ -135,17 +163,15 @@ export function RoomExperience() {
                   )}
                 </div>
               </div>
-              {(isHost || tab === "settings") && (
-                <div className={tab === "settings" || isHost ? "block" : "hidden md:block"}>
-                  {isHost && (
-                    <AdminPanel
-                      settings={room.settings}
-                      categories={categories}
-                      promptPack={promptPack}
-                      onChange={actions.updateSettings}
-                      onImport={actions.importPrompts}
-                    />
-                  )}
+              {isHost && (
+                <div className={activeTab === "settings" ? "block" : "hidden lg:block"}>
+                  <AdminPanel
+                    settings={room.settings}
+                    categories={categories}
+                    promptPack={promptPack}
+                    onChange={actions.updateSettings}
+                    onImport={actions.importPrompts}
+                  />
                 </div>
               )}
             </div>
@@ -186,11 +212,11 @@ export function RoomExperience() {
               )}
 
               {room.phase === "playing" && room.settings.gameMode !== "random" && (
-                <div className="flex flex-wrap items-center justify-center gap-4">
+                <div className="mx-auto flex w-full max-w-md flex-col items-stretch gap-3 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-4">
                   <Button
                     variant="truth"
                     size="lg"
-                    className="min-w-[160px]"
+                    className="sm:min-w-[160px]"
                     disabled={!isMyTurn}
                     onClick={() => actions.choose("truth")}
                   >
@@ -199,7 +225,7 @@ export function RoomExperience() {
                   <Button
                     variant="dare"
                     size="lg"
-                    className="min-w-[160px]"
+                    className="sm:min-w-[160px]"
                     disabled={!isMyTurn}
                     onClick={() => actions.choose("dare")}
                   >
@@ -216,7 +242,7 @@ export function RoomExperience() {
                 <div className="space-y-6">
                   <ChallengeCard challenge={room.currentChallenge} />
                   {isMyTurn && (
-                    <div className="flex flex-wrap items-center justify-center gap-3">
+                    <div className="mx-auto flex w-full max-w-md flex-col items-stretch gap-3 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
                       <Button size="lg" onClick={() => actions.action("complete")}>
                         Complete
                       </Button>
@@ -239,16 +265,16 @@ export function RoomExperience() {
           )}
 
           {room.phase === "ended" && (
-            <div className="glass rounded-[2rem] p-10 text-center">
+            <div className="glass rounded-[1.75rem] p-6 text-center sm:rounded-[2rem] sm:p-10">
               <p className="text-xs uppercase tracking-[0.25em] text-muted">Game Over</p>
-              <h2 className="mt-3 font-display text-5xl text-gradient">
+              <h2 className="mt-3 break-words font-display text-3xl text-gradient sm:text-5xl">
                 {room.players.find((p) => p.id === room.winnerId)?.nickname || "Night complete"}
               </h2>
               <p className="mt-3 text-muted">
                 {room.winnerId ? "takes the crown." : "Thanks for playing."}
               </p>
               {isHost && (
-                <Button className="mt-8" onClick={() => actions.returnToLobby()}>
+                <Button className="mt-8 w-full sm:w-auto" onClick={() => actions.returnToLobby()}>
                   Back to lobby
                 </Button>
               )}
@@ -257,7 +283,7 @@ export function RoomExperience() {
         </main>
 
         <aside className="space-y-4">
-          <div className={`${tab === "players" || tab === "play" ? "block" : "hidden md:block"} space-y-3`}>
+          <div className={`${showPlayers ? "block" : "hidden lg:block"} space-y-3`}>
             <h3 className="px-1 text-xs uppercase tracking-[0.2em] text-muted">
               Players · {room.players.length}/{room.settings.maxPlayers}
             </h3>
@@ -274,7 +300,9 @@ export function RoomExperience() {
               />
             ))}
           </div>
-          <div className={`${tab === "chat" || tab === "play" ? "block" : "hidden md:block"} h-[420px]`}>
+          <div
+            className={`${showChat ? "block" : "hidden lg:block"} h-[min(60vh,420px)] lg:h-[420px]`}
+          >
             <ChatPanel
               messages={room.chat}
               onSend={actions.sendChat}

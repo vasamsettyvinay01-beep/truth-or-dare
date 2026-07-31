@@ -21,6 +21,11 @@ import { promptEngine } from "../prompts/engine";
 
 const makeCode = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", ROOM_CODE_LENGTH);
 
+/** Long enough to survive a phone locking or a tab refresh in the lobby. */
+const LOBBY_RECONNECT_GRACE_MS = 1000 * 90;
+/** How long a room with nobody connected is kept alive for reconnects. */
+const EMPTY_ROOM_TTL_MS = 1000 * 60 * 10;
+
 interface RoomInternal {
   code: string;
   phase: RoomPhase;
@@ -178,12 +183,16 @@ export class RoomManager {
       if (existingId) {
         const existing = room.players.get(existingId);
         if (existing) {
-          if (existing.socketId) this.socketToRoom.delete(existing.socketId);
+          const wasConnected = existing.isConnected;
+          if (existing.socketId && existing.socketId !== opts.socketId) {
+            this.socketToRoom.delete(existing.socketId);
+          }
           existing.socketId = opts.socketId;
           existing.isConnected = true;
           existing.lastSeenAt = this.now();
           this.socketToRoom.set(opts.socketId, room.code);
-          this.pushSystem(room, `${existing.nickname} reconnected`);
+          // Reconnecting from a second tab shouldn't spam the room log.
+          if (!wasConnected) this.pushSystem(room, `${existing.nickname} reconnected`);
           return { room: this.toPublic(room), playerId: existingId, reconnectToken: opts.reconnectToken };
         }
       }
@@ -194,6 +203,16 @@ export class RoomManager {
     }
     if (room.players.size >= room.settings.maxPlayers) {
       throw Object.assign(new Error("Room is full"), { code: "ROOM_FULL" });
+    }
+
+    const desiredNickname = opts.nickname.trim().slice(0, 20) || "Player";
+    const nicknameTaken = [...room.players.values()].some(
+      (p) => p.nickname.toLowerCase() === desiredNickname.toLowerCase()
+    );
+    if (nicknameTaken) {
+      throw Object.assign(new Error("That nickname is already taken in this room"), {
+        code: "NICKNAME_TAKEN",
+      });
     }
 
     const playerId = uuid();
@@ -207,7 +226,7 @@ export class RoomManager {
     const player: Player = {
       id: playerId,
       socketId: opts.socketId,
-      nickname: opts.nickname.trim().slice(0, 20) || "Player",
+      nickname: desiredNickname,
       color,
       isHost: false,
       isReady: false,
@@ -228,6 +247,38 @@ export class RoomManager {
     return { room: this.toPublic(room), playerId, reconnectToken };
   }
 
+  /**
+   * A transport-level drop. Mobile browsers disconnect constantly (screen lock,
+   * app switch, network handover), so the seat and the reconnect token are held
+   * until the sweeper decides the player is really gone.
+   */
+  disconnectBySocket(
+    socketId: string
+  ): { roomCode: string; room: RoomPublic | null; destroyed: boolean } | null {
+    const code = this.socketToRoom.get(socketId);
+    if (!code) return null;
+    const room = this.getRoom(code);
+    if (!room) {
+      this.socketToRoom.delete(socketId);
+      return null;
+    }
+
+    const player = [...room.players.values()].find((p) => p.socketId === socketId);
+    this.socketToRoom.delete(socketId);
+    if (!player) {
+      return { roomCode: code, room: this.toPublic(room), destroyed: false };
+    }
+
+    player.isConnected = false;
+    player.socketId = null;
+    player.lastSeenAt = this.now();
+    room.voicePeers.delete(player.id);
+    this.pushSystem(room, `${player.nickname} disconnected`);
+
+    return { roomCode: code, room: this.toPublic(room), destroyed: false };
+  }
+
+  /** An explicit "Leave" tap. The seat is released straight away. */
   leaveBySocket(socketId: string): { roomCode: string; room: RoomPublic | null; destroyed: boolean } | null {
     const code = this.socketToRoom.get(socketId);
     if (!code) return null;
@@ -238,24 +289,13 @@ export class RoomManager {
     }
 
     const player = [...room.players.values()].find((p) => p.socketId === socketId);
+    this.socketToRoom.delete(socketId);
     if (!player) {
-      this.socketToRoom.delete(socketId);
       return { roomCode: code, room: this.toPublic(room), destroyed: false };
     }
 
-    player.isConnected = false;
-    player.socketId = null;
-    player.lastSeenAt = this.now();
     room.voicePeers.delete(player.id);
-    this.socketToRoom.delete(socketId);
-    this.pushSystem(room, `${player.nickname} disconnected`);
-
-    // Immediate leave if still in lobby
-    if (room.phase === "lobby" || room.phase === "level_select") {
-      return this.removePlayer(room, player.id);
-    }
-
-    return { roomCode: code, room: this.toPublic(room), destroyed: false };
+    return this.removePlayer(room, player.id);
   }
 
   private removePlayer(
@@ -758,13 +798,26 @@ export class RoomManager {
   private sweep() {
     const now = this.now();
     for (const room of this.rooms.values()) {
-      // Remove long-disconnected players
+      // A seat in the lobby is cheap to give up, so it is reclaimed sooner than
+      // a seat mid-game where losing the player would break the turn order.
+      const grace =
+        room.phase === "lobby" || room.phase === "level_select"
+          ? LOBBY_RECONNECT_GRACE_MS
+          : RECONNECT_GRACE_MS;
+
       for (const p of [...room.players.values()]) {
-        if (!p.isConnected && now - p.lastSeenAt > RECONNECT_GRACE_MS) {
+        if (!p.isConnected && now - p.lastSeenAt > grace) {
           this.removePlayer(room, p.id);
         }
       }
       if (!this.rooms.has(room.code)) continue;
+
+      // Nothing should outlive a room everyone abandoned.
+      const anyConnected = [...room.players.values()].some((p) => p.isConnected);
+      if (!anyConnected && now - room.lastActivityAt > EMPTY_ROOM_TTL_MS) {
+        this.destroyRoom(room.code, "empty");
+        continue;
+      }
       if (now - room.lastActivityAt > ROOM_IDLE_TTL_MS) {
         this.destroyRoom(room.code, "idle");
       }

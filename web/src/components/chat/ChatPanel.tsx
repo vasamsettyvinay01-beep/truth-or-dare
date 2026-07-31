@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Pin, Send } from "lucide-react";
 import type { ChatMessage } from "@tod/shared";
@@ -21,15 +21,28 @@ export function ChatPanel({
   disabled?: boolean;
 }) {
   const [text, setText] = useState("");
-  const endRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const pinned = useMemo(() => messages.filter((m) => m.pinned), [messages]);
+
+  const scrollToEnd = useCallback(() => {
+    const list = listRef.current;
+    if (!list) return;
+    // Scroll the message list itself. scrollIntoView would drag the whole page
+    // on mobile and push the composer under the keyboard.
+    list.scrollTop = list.scrollHeight;
+  }, []);
+
+  useEffect(() => {
+    scrollToEnd();
+  }, [messages.length, scrollToEnd]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!text.trim()) return;
-    onSend(text);
+    const value = text.trim();
+    if (!value) return;
+    onSend(value);
     setText("");
-    setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    requestAnimationFrame(scrollToEnd);
   };
 
   return (
@@ -46,7 +59,14 @@ export function ChatPanel({
           </div>
         )}
       </div>
-      <div className="scrollbar-thin flex-1 space-y-2 overflow-y-auto px-4 py-3">
+      <div
+        ref={listRef}
+        className="scrollbar-thin flex-1 space-y-2 overflow-y-auto overscroll-contain px-4 py-3"
+        style={{ WebkitOverflowScrolling: "touch" }}
+        role="log"
+        aria-live="polite"
+        aria-label="Room chat messages"
+      >
         {messages.map((m) => (
           <motion.div
             key={m.id}
@@ -67,11 +87,12 @@ export function ChatPanel({
                 {isHost && (
                   <button
                     type="button"
-                    className="opacity-0 transition group-hover:opacity-100"
+                    // Visible by default: touch devices have no hover state.
+                    className="-m-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full opacity-50 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                     onClick={() => onPin(m.id)}
-                    title="Pin"
+                    aria-label={m.pinned ? "Unpin message" : "Pin message"}
                   >
-                    <Pin className="h-3 w-3 text-muted" />
+                    <Pin className="h-3.5 w-3.5 text-muted" aria-hidden />
                   </button>
                 )}
               </div>
@@ -79,18 +100,31 @@ export function ChatPanel({
             <p className={cn(m.type === "reaction" ? "" : "text-cream/90")}>{m.text}</p>
           </motion.div>
         ))}
-        <div ref={endRef} />
       </div>
       <form onSubmit={submit} className="flex gap-2 border-t border-white/10 p-3">
+        <label htmlFor="chat-input" className="sr-only">
+          Chat message
+        </label>
         <input
+          id="chat-input"
           value={text}
           onChange={(e) => setText(e.target.value)}
           disabled={disabled}
+          maxLength={280}
+          autoComplete="off"
+          enterKeyHint="send"
           placeholder={disabled ? "Chat disabled" : "Say something…"}
-          className="h-11 flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm outline-none focus:border-[color:var(--color-accent)]/40"
+          // 16px prevents iOS Safari from zooming the page on focus.
+          className="h-12 min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 text-base outline-none focus:border-[color:var(--color-accent)]/40"
         />
-        <Button type="submit" size="md" disabled={disabled || !text.trim()} className="px-4">
-          <Send className="h-4 w-4" />
+        <Button
+          type="submit"
+          size="md"
+          disabled={disabled || !text.trim()}
+          className="shrink-0 px-4"
+          aria-label="Send message"
+        >
+          <Send className="h-4 w-4" aria-hidden />
         </Button>
       </form>
     </div>

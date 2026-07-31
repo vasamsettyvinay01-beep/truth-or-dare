@@ -26,7 +26,18 @@
 
   html,
   body {
+    width: 100%;
+    max-width: 100%;
     min-height: 100%;
+    /* Mobile browsers report a wider layout viewport when any child overflows,
+       which shrinks every element and makes the whole app look broken. */
+    overflow-x: hidden;
+    overscroll-behavior-y: none;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   body {
@@ -36,6 +47,7 @@
     background: var(--color-ink);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    -webkit-tap-highlight-color: transparent;
   }
 
   ::selection {
@@ -47,6 +59,32 @@
   select,
   textarea {
     font: inherit;
+  }
+
+  /* Anything under 16px makes iOS Safari zoom the page on focus and never
+     zoom back out, leaving the layout shifted sideways. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  button,
+  [role="button"],
+  a {
+    touch-action: manipulation;
+  }
+
+  :focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--color-accent) 70%, white);
+    outline-offset: 2px;
+  }
+
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
   }
 }
 
@@ -97,5 +135,62 @@
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.12);
     border-radius: 999px;
+  }
+
+  /* Full-height that survives the iOS address bar collapsing. */
+  .min-h-screen-safe {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .h-screen-safe {
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-x {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Screen-level padding that clears the notch and the home indicator. */
+  .safe-area {
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+  }
+
+  /* Apple's minimum comfortable touch target. */
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* backdrop-filter on many stacked panels destroys scroll performance on
+   low-end Android devices, so drop the blur where the GPU is likely weak. */
+@media (max-width: 640px) {
+  .glass {
+    backdrop-filter: blur(10px);
   }
 }

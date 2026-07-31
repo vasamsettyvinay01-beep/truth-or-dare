@@ -21,7 +21,7 @@ npm run dev
 - Web: [http://localhost:3000](http://localhost:3000)
 - Server: [http://localhost:4001](http://localhost:4001)
 
-Optional env:
+Environment variables (see [`.env.example`](.env.example) for the annotated list):
 
 ```bash
 # web/.env.local
@@ -30,7 +30,32 @@ NEXT_PUBLIC_SOCKET_URL=http://localhost:4001
 # server
 PORT=4001
 CLIENT_ORIGIN=http://localhost:3000
+CLIENT_ORIGINS=http://localhost:3000
 ```
+
+To play from a phone on your LAN, point `NEXT_PUBLIC_SOCKET_URL` at your
+machine's IP (`http://192.168.x.x:4001`) and add the matching web origin to
+`CLIENT_ORIGINS`. `localhost` resolves to the phone itself and will never work.
+
+## Deployment
+
+The frontend and the realtime server deploy separately, because Vercel's
+serverless functions cannot hold an open WebSocket.
+
+| Piece | Host | Notes |
+|-------|------|-------|
+| `web/` | Vercel | Next.js App Router, native routing — no SPA rewrites |
+| `server/` | Render / Railway / Fly | Persistent Node process, health check at `/health` |
+
+1. Deploy the server first. [`render.yaml`](render.yaml) is a ready blueprint;
+   set `CLIENT_ORIGINS` to your Vercel domains.
+2. Copy the resulting **https** URL.
+3. In Vercel, set `NEXT_PUBLIC_SOCKET_URL` to that URL for Production (and
+   Preview, if you want previews to work) and redeploy.
+
+`NEXT_PUBLIC_*` values are inlined into the browser bundle at build time, so
+changing the variable requires a redeploy. An `http://` URL on an `https://`
+page is blocked by every mobile browser as mixed content.
 
 ## Game flow
 
@@ -90,7 +115,14 @@ web/        Next.js app (feature UI, Zustand, socket client)
 
 Rooms live only in memory. When the last player leaves (or the room idles out), the room and any imported packs for that room are destroyed.
 
-Reconnect: a token is stored in `localStorage` so a refresh can rejoin the same seat within the grace window.
+Reconnect: a token is kept in `sessionStorage` so a refresh rejoins the same
+seat within the grace window. It is scoped to the tab, expires on its own, and
+is cleared when the player leaves or the room is destroyed. Nothing is
+persisted server-side either — rooms live in memory only.
+
+A dropped socket is not treated as leaving. Mobile browsers disconnect whenever
+the screen locks or the user switches apps, so the seat is held for 90 seconds
+in the lobby and 5 minutes mid-game before the sweeper reclaims it.
 
 ## Scripts
 
@@ -98,7 +130,13 @@ Reconnect: a token is stored in `localStorage` so a refresh can rejoin the same 
 |---------|-------------|
 | `npm run dev` | Server + web together |
 | `npm run build` | Build shared, server, web |
+| `npm run lint` | ESLint over the web app |
 | `npm run typecheck` | Typecheck all packages |
+| `npm test` | End-to-end multiplayer flow against a running server |
+| `npm run test:mobile` | Playwright audit across phone viewports, plus a two-device touch run |
+
+`npm test` and `npm run test:mobile` expect `npm run dev` to already be
+running. The mobile audit needs `npx playwright install chromium` once.
 
 ## Notes
 

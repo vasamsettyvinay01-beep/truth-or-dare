@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Check, MoreHorizontal } from "lucide-react";
 import type { Player } from "@tod/shared";
@@ -24,6 +25,30 @@ export function PlayerCard({
   onTransfer?: () => void;
   onReact?: (emoji: string) => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  // A <details> menu cannot be dismissed by tapping elsewhere on touch devices,
+  // so the menu is managed explicitly with pointer and Escape handling.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (menuRef.current?.contains(target) || menuButtonRef.current?.contains(target)) return;
+      setMenuOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
+
   return (
     <motion.div
       layout
@@ -61,37 +86,79 @@ export function PlayerCard({
           <span>{player.skipTokens} skips</span>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1">
         {player.isReady ? (
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300">
-            <Check className="h-4 w-4" />
+          <span
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300"
+            title="Ready"
+          >
+            <Check className="h-4 w-4" aria-hidden />
+            <span className="sr-only">Ready</span>
           </span>
         ) : (
-          <span className="h-2 w-2 rounded-full bg-white/20" />
+          <span className="h-2 w-2 rounded-full bg-white/20" aria-label="Not ready" role="img" />
         )}
         {onReact && (
-          <div className="hidden gap-1 sm:flex">
+          <div className="flex">
             {["🔥", "😂", "💀"].map((e) => (
-              <button key={e} type="button" className="text-sm opacity-70 hover:opacity-100" onClick={() => onReact(e)}>
+              <button
+                key={e}
+                type="button"
+                aria-label={`React ${e} to ${player.nickname}`}
+                className="flex h-11 w-9 items-center justify-center text-base opacity-80 transition active:scale-90 sm:hover:opacity-100"
+                onClick={() => onReact(e)}
+              >
                 {e}
               </button>
             ))}
           </div>
         )}
         {isHostView && !isYou && (
-          <details className="relative">
-            <summary className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full hover:bg-white/10">
-              <MoreHorizontal className="h-4 w-4" />
-            </summary>
-            <div className="absolute right-0 z-20 mt-2 w-40 overflow-hidden rounded-2xl border border-white/10 bg-ink-elevated p-1 shadow-xl">
-              <Button variant="ghost" size="sm" className="w-full justify-start" onClick={onTransfer}>
-                Make host
-              </Button>
-              <Button variant="danger" size="sm" className="w-full justify-start" onClick={onKick}>
-                Kick
-              </Button>
-            </div>
-          </details>
+          <div className="relative">
+            <button
+              ref={menuButtonRef}
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              aria-label={`Host options for ${player.nickname}`}
+              onClick={() => setMenuOpen((v) => !v)}
+              className="flex h-11 w-11 items-center justify-center rounded-full active:bg-white/10 sm:hover:bg-white/10"
+            >
+              <MoreHorizontal className="h-4 w-4" aria-hidden />
+            </button>
+            {menuOpen && (
+              <div
+                ref={menuRef}
+                role="menu"
+                className="absolute right-0 z-30 mt-2 w-40 overflow-hidden rounded-2xl border border-white/10 bg-ink-elevated p-1 shadow-xl"
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  role="menuitem"
+                  className="w-full justify-start"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onTransfer?.();
+                  }}
+                >
+                  Make host
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  role="menuitem"
+                  className="w-full justify-start"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onKick?.();
+                  }}
+                >
+                  Kick
+                </Button>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </motion.div>

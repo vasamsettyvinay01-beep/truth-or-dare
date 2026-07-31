@@ -31,7 +31,7 @@ const features = [
 
 export default function HomePage() {
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-screen-safe overflow-x-hidden">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-32 top-0 h-[42rem] w-[42rem] rounded-full bg-[radial-gradient(circle,rgba(255,77,109,0.22),transparent_60%)] blur-2xl" />
         <div className="absolute -right-24 top-40 h-[36rem] w-[36rem] rounded-full bg-[radial-gradient(circle,rgba(124,92,255,0.2),transparent_60%)] blur-2xl" />
@@ -39,10 +39,10 @@ export default function HomePage() {
         <FloatingParticles />
       </div>
 
-      <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col px-6 pb-16 pt-8">
-        <nav className="flex items-center justify-between">
+      <div className="safe-area relative mx-auto flex min-h-screen-safe max-w-6xl flex-col px-5 pb-14 pt-6 sm:px-6 sm:pb-16 sm:pt-8">
+        <nav className="flex items-center justify-between gap-3">
           <div className="font-display text-lg tracking-[0.2em]">TOD</div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link href="/join">
               <Button variant="ghost" size="sm">
                 Join
@@ -50,35 +50,37 @@ export default function HomePage() {
             </Link>
             <Link href="/create">
               <Button size="sm">
-                Create room <ArrowRight className="h-4 w-4" />
+                Create room <ArrowRight className="h-4 w-4" aria-hidden />
               </Button>
             </Link>
           </div>
         </nav>
 
-        <section className="relative mt-16 flex flex-1 flex-col justify-center md:mt-10">
+        <section className="relative mt-12 flex flex-1 flex-col justify-center sm:mt-16 md:mt-10">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             className="max-w-3xl"
           >
-            <p className="text-xs uppercase tracking-[0.35em] text-muted">Remote nights · Real stakes</p>
-            <h1 className="mt-5 font-display text-6xl leading-[0.95] tracking-tight md:text-8xl">
+            <p className="text-[11px] uppercase tracking-[0.3em] text-muted sm:text-xs sm:tracking-[0.35em]">
+              Remote nights · Real stakes
+            </p>
+            <h1 className="mt-4 font-display text-[clamp(2.75rem,13vw,4rem)] leading-[0.95] tracking-tight sm:mt-5 md:text-8xl">
               <span className="text-gradient">Truth or Dare</span>
             </h1>
-            <p className="mt-6 max-w-xl text-lg text-muted md:text-xl">
+            <p className="mt-5 max-w-xl text-base text-muted sm:mt-6 sm:text-lg md:text-xl">
               A premium multiplayer social game for friends anywhere in the world.
               One link. Zero logins. Pure chaos.
             </p>
-            <div className="mt-10 flex flex-wrap gap-4">
-              <Link href="/create">
-                <Button size="lg">
-                  Create a room <ArrowRight className="h-4 w-4" />
+            <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:flex-wrap sm:gap-4">
+              <Link href="/create" className="sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto">
+                  Create a room <ArrowRight className="h-4 w-4" aria-hidden />
                 </Button>
               </Link>
-              <Link href="/join">
-                <Button size="lg" variant="secondary">
+              <Link href="/join" className="sm:w-auto">
+                <Button size="lg" variant="secondary" className="w-full sm:w-auto">
                   Join with code
                 </Button>
               </Link>
@@ -114,7 +116,7 @@ export default function HomePage() {
           </motion.div>
         </section>
 
-        <section className="mt-20 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <section className="mt-14 grid gap-4 sm:mt-20 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((f, i) => (
             <motion.div
               key={f.title}

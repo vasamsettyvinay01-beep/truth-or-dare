@@ -1,18 +1,32 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useMemo } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { useIsSmallScreen } from "@/hooks/use-media-query";
 
 export function FloatingParticles({ count = 24 }: { count?: number }) {
-  const particles = Array.from({ length: count }, (_, i) => ({
-    id: i,
-    left: `${(i * 37) % 100}%`,
-    size: 2 + (i % 4),
-    delay: (i % 10) * 0.4,
-    duration: 8 + (i % 7),
-  }));
+  const reduceMotion = useReducedMotion();
+  const isSmall = useIsSmallScreen();
+
+  // Dozens of infinite transforms drain the battery and drop frames on phones.
+  const effectiveCount = reduceMotion ? 0 : isSmall ? Math.min(count, 8) : count;
+
+  const particles = useMemo(
+    () =>
+      Array.from({ length: effectiveCount }, (_, i) => ({
+        id: i,
+        left: `${(i * 37) % 100}%`,
+        size: 2 + (i % 4),
+        delay: (i % 10) * 0.4,
+        duration: 8 + (i % 7),
+      })),
+    [effectiveCount]
+  );
+
+  if (!particles.length) return null;
 
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
       {particles.map((p) => (
         <motion.span
           key={p.id}

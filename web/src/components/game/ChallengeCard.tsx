@@ -21,11 +21,15 @@ export function ChallengeCard({ challenge }: { challenge: CurrentChallenge }) {
       setRemaining(null);
       return;
     }
+    const endsAt = challenge.timerEndsAt;
     const tick = () => {
-      setRemaining(Math.max(0, Math.ceil((challenge.timerEndsAt! - Date.now()) / 1000)));
+      const next = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+      // Only commit when the displayed second actually changes, otherwise this
+      // re-renders the card several times a second for nothing.
+      setRemaining((prev) => (prev === next ? prev : next));
     };
     tick();
-    const id = setInterval(tick, 250);
+    const id = setInterval(tick, 500);
     return () => clearInterval(id);
   }, [challenge.timerEndsAt]);
 
@@ -40,7 +44,7 @@ export function ChallengeCard({ challenge }: { challenge: CurrentChallenge }) {
           animate={{ rotateY: flipped ? 0 : 90, opacity: 1 }}
           exit={{ rotateY: -90, opacity: 0 }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-          className="relative overflow-hidden rounded-[2rem] border border-white/10 p-8 shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+          className="relative overflow-hidden rounded-[1.75rem] border border-white/10 p-5 shadow-[0_30px_80px_rgba(0,0,0,0.45)] sm:rounded-[2rem] sm:p-8"
           style={{
             background: isTruth
               ? "linear-gradient(160deg, rgba(14,165,233,0.2), rgba(7,7,11,0.95) 55%)"
@@ -48,7 +52,7 @@ export function ChallengeCard({ challenge }: { challenge: CurrentChallenge }) {
           }}
         >
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
-          <div className="mb-6 flex items-center justify-between gap-3">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3 sm:mb-6">
             <div className="flex flex-wrap items-center gap-2">
               <span
                 className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]"
@@ -76,9 +80,9 @@ export function ChallengeCard({ challenge }: { challenge: CurrentChallenge }) {
             )}
           </div>
           <div className="flex items-start gap-3">
-            <Sparkles className={isTruth ? "text-sky-300" : "text-rose-300"} />
-            <div>
-              <p className="font-display text-2xl leading-snug text-cream md:text-3xl">
+            <Sparkles className={`mt-1 h-5 w-5 shrink-0 ${isTruth ? "text-sky-300" : "text-rose-300"}`} aria-hidden />
+            <div className="min-w-0">
+              <p className="font-display text-xl leading-snug text-cream sm:text-2xl md:text-3xl">
                 {challenge.text}
               </p>
               {challenge.tags?.length > 0 && (

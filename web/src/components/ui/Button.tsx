@@ -22,10 +22,11 @@ const variants: Record<NonNullable<ButtonProps["variant"]>, string> = {
     "bg-[linear-gradient(135deg,#e11d48,#fb7185)] text-white font-semibold shadow-[0_10px_40px_rgba(251,113,133,0.3)]",
 };
 
+// Every size clears the 44px minimum touch target.
 const sizes: Record<NonNullable<ButtonProps["size"]>, string> = {
-  sm: "h-9 px-3 text-sm rounded-xl",
-  md: "h-11 px-5 text-sm rounded-2xl",
-  lg: "h-14 px-7 text-base rounded-2xl",
+  sm: "min-h-[44px] px-3.5 text-sm rounded-xl",
+  md: "min-h-[48px] px-5 text-sm rounded-2xl",
+  lg: "min-h-[56px] px-6 text-base rounded-2xl sm:px-7",
 };
 
 export function Button({
@@ -38,10 +39,11 @@ export function Button({
 }: ButtonProps) {
   return (
     <motion.button
+      type={props.type ?? "button"}
       whileHover={disabled ? undefined : { y: -1, scale: 1.01 }}
       whileTap={disabled ? undefined : { scale: 0.98 }}
       className={cn(
-        "inline-flex items-center justify-center gap-2 font-medium transition-all disabled:pointer-events-none disabled:opacity-40",
+        "inline-flex items-center justify-center gap-2 text-center font-medium transition-all disabled:pointer-events-none disabled:opacity-40",
         variants[variant],
         sizes[size],
         className

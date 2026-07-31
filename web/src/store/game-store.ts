@@ -8,9 +8,20 @@ import type {
   RoomPublic,
 } from "@tod/shared";
 
+export type ConnectionStatus =
+  | "idle"
+  | "connecting"
+  | "connected"
+  | "reconnecting"
+  | "disconnected"
+  | "unavailable";
+
 interface GameStore {
   connected: boolean;
   connecting: boolean;
+  status: ConnectionStatus;
+  /** Set when the deployment itself is misconfigured (bad socket URL, etc). */
+  fatalError: string | null;
   playerId: string | null;
   reconnectToken: string | null;
   room: RoomPublic | null;
@@ -21,6 +32,8 @@ interface GameStore {
   confettiNonce: number;
   setConnected: (v: boolean) => void;
   setConnecting: (v: boolean) => void;
+  setStatus: (status: ConnectionStatus) => void;
+  setFatalError: (message: string | null) => void;
   setSession: (playerId: string, reconnectToken: string) => void;
   setRoom: (room: RoomPublic | null) => void;
   appendChat: (message: ChatMessage) => void;
@@ -35,6 +48,8 @@ interface GameStore {
 export const useGameStore = create<GameStore>((set) => ({
   connected: false,
   connecting: false,
+  status: "idle",
+  fatalError: null,
   playerId: null,
   reconnectToken: null,
   room: null,
@@ -45,6 +60,13 @@ export const useGameStore = create<GameStore>((set) => ({
   confettiNonce: 0,
   setConnected: (connected) => set({ connected }),
   setConnecting: (connecting) => set({ connecting }),
+  setStatus: (status) =>
+    set({
+      status,
+      connected: status === "connected",
+      connecting: status === "connecting" || status === "reconnecting",
+    }),
+  setFatalError: (fatalError) => set({ fatalError }),
   setSession: (playerId, reconnectToken) => set({ playerId, reconnectToken }),
   setRoom: (room) => set({ room }),
   appendChat: (message) =>
