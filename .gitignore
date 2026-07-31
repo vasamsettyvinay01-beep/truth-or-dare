@@ -1,24 +1,36 @@
 # Truth or Dare
 
 # Dependencies and build output
-node_modules
-dist
-.next
-.turbo
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.next/
+**/.next/
+.turbo/
 *.tsbuildinfo
+coverage/
 
 # Environment files — never commit real credentials
 .env
 .env.*
 !.env.example
+!**/.env.example
 
-# Local tooling
+# Local tooling / deploy state
 *.log
-.vercel
+logs/
+.vercel/
+.railway/
 .DS_Store
+Thumbs.db
 client/
 
 # Test artifacts
 scripts/.shots/
+scripts/_*.png
+scripts/_*.mjs
 playwright-report/
 test-results/
+.env.vercel.check
+.tunnels.txt

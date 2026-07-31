@@ -1,14 +1,52 @@
 # Truth or Dare
 
-Premium real-time multiplayer **Truth or Dare** for the browser. Create a room, share a code or invite link, play with friends anywhere — no accounts, no database, nothing persisted after the room dies.
+Premium real-time multiplayer **Truth or Dare** for the browser. Create a room, share a code or invite link, and play with friends — no accounts, no database, nothing persisted after the room ends.
+
+## Production
+
+| Surface | URL |
+|---------|-----|
+| Frontend | https://truth-or-dare-gray.vercel.app |
+| API | https://api-production-97fc.up.railway.app |
+| Health | https://api-production-97fc.up.railway.app/health |
+
+```text
+Browser (Vercel / Next.js)
+        │  HTTPS + Socket.IO
+        ▼
+Express + Socket.IO (Railway)
+        │
+   in-memory rooms only
+```
 
 ## Stack
 
 | Layer | Tech |
 |-------|------|
-| Web | Next.js 15, React 19, TypeScript, Tailwind CSS 4, Framer Motion, Zustand |
-| Realtime | Express, Socket.IO |
-| State | In-memory rooms only |
+| `web/` | Next.js 15, React 19, TypeScript, Tailwind, Framer Motion, Zustand |
+| `server/` | Express, Socket.IO, in-memory `RoomManager`, prompt engine |
+| `shared/` | Shared types, limits, validation helpers |
+
+## Privacy model
+
+* No accounts or passwords
+* No database
+* Rooms, chat, nicknames, and imported packs live only in server memory
+* Reconnect tokens are temporary, room-scoped, and stored in tab `sessionStorage`
+* Nothing is retained after the room is destroyed or the process restarts
+
+## Security model (high level)
+
+* CORS allowlist — no `*` in production
+* Server-side validation of every Socket.IO payload
+* Host authority from server room state (never trust client `isHost`)
+* Per-IP / per-socket rate limits and payload size caps
+* Temporary reconnect tokens with expiry and invalidation on leave
+* Prompt imports validated as hostile JSON (size, count, shape)
+* Security headers on API and Next.js responses
+* Minimal logging — no tokens, chat content, or full packs
+
+See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 
 ## Quick start
 
@@ -18,127 +56,87 @@ npm run build -w shared
 npm run dev
 ```
 
-- Web: [http://localhost:3000](http://localhost:3000)
-- Server: [http://localhost:4001](http://localhost:4001)
+- Web: http://localhost:3000
+- Server: http://localhost:4001
 
-Environment variables (see [`.env.example`](.env.example) for the annotated list):
+Copy [`.env.example`](.env.example) into `web/.env.local` as needed:
 
 ```bash
-# web/.env.local
 NEXT_PUBLIC_SOCKET_URL=http://localhost:4001
-
-# server
 PORT=4001
 CLIENT_ORIGIN=http://localhost:3000
 CLIENT_ORIGINS=http://localhost:3000
 ```
 
-To play from a phone on your LAN, point `NEXT_PUBLIC_SOCKET_URL` at your
-machine's IP (`http://192.168.x.x:4001`) and add the matching web origin to
-`CLIENT_ORIGINS`. `localhost` resolves to the phone itself and will never work.
+Phone on the same Wi-Fi: open the Network URL from `next dev`. A loopback socket URL is rewritten to the page host; the server accepts private-network origins outside production.
 
-## Deployment
+## Repository structure
 
-The frontend and the realtime server deploy separately, because Vercel's
-serverless functions cannot hold an open WebSocket.
-
-| Piece | Host | Notes |
-|-------|------|-------|
-| `web/` | Vercel | Next.js App Router, native routing — no SPA rewrites |
-| `server/` | Render / Railway / Fly | Persistent Node process, health check at `/health` |
-
-1. Deploy the server first. [`render.yaml`](render.yaml) is a ready blueprint;
-   set `CLIENT_ORIGINS` to your Vercel domains.
-2. Copy the resulting **https** URL.
-3. In Vercel, set `NEXT_PUBLIC_SOCKET_URL` to that URL for Production (and
-   Preview, if you want previews to work) and redeploy.
-
-`NEXT_PUBLIC_*` values are inlined into the browser bundle at build time, so
-changing the variable requires a redeploy. An `http://` URL on an `https://`
-page is blocked by every mobile browser as mixed content.
-
-## Game flow
-
-Landing → Create / Join → Lobby → Everyone ready → Host picks level → Turns → Truth/Dare (or spin/random) → Complete / Skip / New prompt → Next player
-
-### Levels
-
-Cool · Spicy · Extreme · No Boundaries
-
-### Modes
-
-Classic · Random · Spin Wheel · Survival · Couples · Team Battle · Last Standing
-
-## Custom prompts
-
-Default packs live in `server/prompts/` (auto-loaded):
-
-- `core-pack.json`
-- `adult-romance-pack.json` (~1080 romance / flirting prompts)
-
-Hosts can **export / import** JSON packs from the lobby admin panel. Canonical schema:
-
-```json
-{
-  "id": "my-pack",
-  "name": "My Pack",
-  "version": "1.0.0",
-  "categories": ["romance", "flirting"],
-  "prompts": [
-    {
-      "id": "unique-id",
-      "type": "truth",
-      "category": "romance",
-      "difficulty": "cool",
-      "prompt": "Your prompt here",
-      "remoteFriendly": true,
-      "tags": ["cool", "truth", "romance", "remote"],
-      "weight": 1
-    }
-  ]
-}
+```text
+shared/     Types, constants, limits, sanitizers
+server/     Express + Socket.IO, rooms, prompts, rate limits
+web/        Next.js UI, Zustand, socket client
+prompts/    Source prompt packs
+scripts/    Unit + e2e + mobile audit helpers
 ```
-
-See `server/prompts/PROMPT_ENGINE.md` for search, weighting, and remote-play details.
-
-`difficulty`: `cool` | `spicy` | `extreme` | `no_boundaries`  
-`type`: `truth` | `dare`  
-Legacy `level` / `text` fields are still accepted and normalized on load.
-
-## Architecture
-
-```
-shared/     Shared TypeScript types & constants
-server/     Express + Socket.IO, in-memory RoomManager, prompt engine
-web/        Next.js app (feature UI, Zustand, socket client)
-```
-
-Rooms live only in memory. When the last player leaves (or the room idles out), the room and any imported packs for that room are destroyed.
-
-Reconnect: a token is kept in `sessionStorage` so a refresh rejoins the same
-seat within the grace window. It is scoped to the tab, expires on its own, and
-is cleared when the player leaves or the room is destroyed. Nothing is
-persisted server-side either — rooms live in memory only.
-
-A dropped socket is not treated as leaving. Mobile browsers disconnect whenever
-the screen locks or the user switches apps, so the seat is held for 90 seconds
-in the lobby and 5 minutes mid-game before the sweeper reclaims it.
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Server + web together |
-| `npm run build` | Build shared, server, web |
-| `npm run lint` | ESLint over the web app |
-| `npm run typecheck` | Typecheck all packages |
-| `npm test` | End-to-end multiplayer flow against a running server |
-| `npm run test:mobile` | Playwright audit across phone viewports, plus a two-device touch run |
+| `npm run dev` | Server + web |
+| `npm run build` | Build shared → server → web |
+| `npm run lint` | ESLint (web) |
+| `npm run typecheck` | Typecheck all workspaces |
+| `npm run test:unit` | Shared validation unit checks |
+| `npm run test:e2e` | Socket.IO multiplayer flow (needs server on `:4001`) |
+| `npm test` | Unit + e2e |
+| `npm run test:mobile` | Playwright mobile audit (needs `npm run dev`) |
 
-`npm test` and `npm run test:mobile` expect `npm run dev` to already be
-running. The mobile audit needs `npx playwright install chromium` once.
+## Deployment
 
-## Notes
+Frontend and realtime server deploy separately — Vercel cannot hold long-lived WebSockets.
 
-- Adults-only content packs are editable — keep production prompts appropriate for your audience.
-- Optional voice is signaling-ready (`voice:*` events); wire WebRTC peers on the client if you want full audio.
+| Piece | Host | Notes |
+|-------|------|-------|
+| `web/` | Vercel | Set `NEXT_PUBLIC_SOCKET_URL` (Production) to the https API URL |
+| `server/` | Railway | `PORT`, `CLIENT_ORIGINS`, `NODE_ENV=production`; bind `0.0.0.0` |
+
+1. Deploy the API (`server/Dockerfile` / `railway.toml`).
+2. Set `CLIENT_ORIGINS` to the production Vercel origin (and optional preview pattern).
+3. Set Vercel `NEXT_PUBLIC_SOCKET_URL` to the Railway https URL and redeploy.
+
+Never point an https frontend at an `http://` API (mixed content). Do not set `CLIENT_ORIGINS=*`.
+
+## Game flow
+
+Landing → Create / Join → Lobby → Ready → Host starts → Level → Turns → Truth/Dare → Complete / Skip → Next
+
+**Levels:** Cool · Spicy · Extreme · No Boundaries  
+
+**Modes:** Classic · Random · Spin Wheel · Survival / Couples / Team Battle / Last Standing (**experimental** in the UI)
+
+## Custom prompts
+
+Default packs in `server/prompts/`. Hosts can export / import JSON from the lobby. Imports are size- and schema-limited. See `server/prompts/PROMPT_ENGINE.md`.
+
+## Known limitations
+
+* Single Node process — rooms do not survive redeploys or multi-instance fan-out
+* Rate limits are in-memory per instance
+* Voice is signaling-only (“Coming soon” in UI)
+* Theme preference is stored but not fully applied in CSS yet
+* `npm audit` may report Next.js-transitive issues; do not force-downgrade Next without review
+
+## Troubleshooting
+
+| Symptom | Check |
+|---------|-------|
+| Create room stuck / “Connection lost” on Vercel | `NEXT_PUBLIC_SOCKET_URL` set and redeployed; `/health` OK |
+| CORS errors | `CLIENT_ORIGINS` includes the exact frontend origin |
+| Phone cannot reach localhost API | Use LAN Network URL or deployed API |
+| Room vanished | Process restarted or idle cleanup — expected for in-memory rooms |
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
