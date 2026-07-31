@@ -178,19 +178,21 @@ export class PromptCatalog {
       remoteOnly: options.remoteOnly,
     };
 
-    let ids = this.candidateIds(baseQuery).filter((id) => {
-      const p = this.byId.get(id)!;
-      return this.matchesMode(p, options.mode);
-    });
+    const generalIds = this.candidateIds(baseQuery);
+    let ids = generalIds.filter((id) => this.matchesMode(this.byId.get(id)!, options.mode));
 
-    // Soft mode fallback: if couples/team filters empty the pool, use general prompts
-    if (!ids.length && (options.mode === "couples" || options.mode === "team_battle")) {
-      ids = this.candidateIds(baseQuery);
+    // Couples/team tagging covers only a handful of prompts, so treat it as a
+    // preference: once the tagged ones are used the turn falls back to the
+    // general pool instead of dead-ending the game with NO_PROMPTS.
+    const softMode = options.mode === "couples" || options.mode === "team_battle";
+
+    let pool = ids.filter((id) => !used.has(id));
+    if (!pool.length && softMode) {
+      ids = generalIds;
+      pool = generalIds.filter((id) => !used.has(id));
     }
 
-    const fresh = ids.filter((id) => !used.has(id));
     let repeated = false;
-    let pool = fresh;
 
     if (!pool.length) {
       if (options.strictNoRepeat !== false) {
