@@ -12,7 +12,6 @@ import {
   type CurrentChallenge,
   type GameLevel,
   type Player,
-  type PromptPack,
   type RoomPhase,
   type RoomPublic,
   type RoomSettings,
@@ -336,6 +335,10 @@ export class RoomManager {
       ...partial,
       maxPlayers: Math.min(20, Math.max(2, partial.maxPlayers ?? room.settings.maxPlayers)),
       timerSeconds: Math.min(300, Math.max(0, partial.timerSeconds ?? room.settings.timerSeconds)),
+      remoteOnly: partial.remoteOnly ?? room.settings.remoteOnly ?? true,
+      categoryWeights: partial.categoryWeights
+        ? { ...(room.settings.categoryWeights || {}), ...partial.categoryWeights }
+        : room.settings.categoryWeights || {},
     };
     this.ensureCategories(room);
     this.touch(room);
@@ -559,17 +562,25 @@ export class RoomManager {
 
   private assignPrompt(room: RoomInternal, type: ChallengeType, replace = false) {
     if (!room.level) throw Object.assign(new Error("No level"), { code: "NO_LEVEL" });
-    const prompt = promptEngine.pickPrompt({
+    const picked = promptEngine.pickPrompt({
       roomId: room.code,
       type,
       level: room.level,
       mode: room.settings.gameMode,
       enabledCategories: room.settings.enabledCategories,
       usedIds: room.usedPromptIds,
+      remoteOnly: room.settings.remoteOnly,
+      categoryWeights: room.settings.categoryWeights,
+      strictNoRepeat: true,
     });
-    if (!prompt) throw Object.assign(new Error("No prompts available"), { code: "NO_PROMPTS" });
-    if (!replace) room.usedPromptIds.add(prompt.id);
-    else room.usedPromptIds.add(prompt.id);
+    if (!picked) {
+      throw Object.assign(
+        new Error("No unused prompts left — enable more categories or change difficulty"),
+        { code: "NO_PROMPTS" }
+      );
+    }
+    const prompt = picked.prompt;
+    room.usedPromptIds.add(prompt.id);
 
     const timer =
       room.settings.timerSeconds > 0 ? this.now() + room.settings.timerSeconds * 1000 : null;
@@ -577,9 +588,11 @@ export class RoomManager {
     room.currentChallenge = {
       promptId: prompt.id,
       type: prompt.type,
-      text: prompt.text,
+      text: prompt.prompt,
       category: prompt.category,
-      level: prompt.level,
+      level: prompt.difficulty,
+      tags: prompt.tags,
+      remoteFriendly: prompt.remoteFriendly,
       assignedAt: this.now(),
       timerEndsAt: timer,
     };
@@ -636,13 +649,15 @@ export class RoomManager {
     return { message, fromId: player.id, emoji, toId: targetPlayerId };
   }
 
-  importPrompts(socketId: string, pack: PromptPack) {
+  importPrompts(socketId: string, pack: unknown) {
     const room = this.roomForSocket(socketId);
     const player = this.playerForSocket(socketId, room);
     if (player.id !== room.hostId) throw Object.assign(new Error("Only host"), { code: "NOT_HOST" });
     const merged = promptEngine.importPack(pack, room.code);
-    room.settings.enabledCategories = [...new Set([...room.settings.enabledCategories, ...merged.categories])];
-    this.pushSystem(room, `Custom prompt pack "${pack.name}" imported`);
+    room.settings.enabledCategories = [
+      ...new Set([...room.settings.enabledCategories, ...merged.categories]),
+    ];
+    this.pushSystem(room, `Prompt pack imported (${merged.prompts.length} prompts in catalog)`);
     this.touch(room);
     return { room: this.toPublic(room), pack: merged };
   }

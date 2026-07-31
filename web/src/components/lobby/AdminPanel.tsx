@@ -1,17 +1,18 @@
 "use client";
 
-import { useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   GAME_LEVELS,
   GAME_MODES,
   type GameLevel,
   type GameMode,
   type PromptPack,
+  type PromptRecord,
   type RoomSettings,
 } from "@tod/shared";
-import { Download, Upload } from "lucide-react";
+import { Download, Search, Upload } from "lucide-react";
 import { Button } from "../ui/Button";
-import { cn } from "@/lib/utils";
+import { cn, levelLabel } from "@/lib/utils";
 
 export function AdminPanel({
   settings,
@@ -27,6 +28,10 @@ export function AdminPanel({
   onImport: (pack: PromptPack) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState<"all" | "truth" | "dare">("all");
+  const [filterDifficulty, setFilterDifficulty] = useState<GameLevel | "all">("all");
+  const [remoteFilter, setRemoteFilter] = useState<"all" | "remote" | "local">("all");
 
   const toggleCategory = (cat: string) => {
     const set = new Set(settings.enabledCategories);
@@ -44,6 +49,44 @@ export function AdminPanel({
     onChange({ enabledLevels: [...set] });
   };
 
+  const setCategoryWeight = (cat: string, weight: number) => {
+    onChange({
+      categoryWeights: {
+        ...(settings.categoryWeights || {}),
+        [cat]: weight,
+      },
+    });
+  };
+
+  const filteredPrompts = useMemo(() => {
+    const list = promptPack?.prompts || [];
+    const q = search.trim().toLowerCase();
+    return list
+      .filter((p) => {
+        if (filterType !== "all" && p.type !== filterType) return false;
+        if (filterDifficulty !== "all" && p.difficulty !== filterDifficulty) return false;
+        if (remoteFilter === "remote" && !p.remoteFriendly) return false;
+        if (remoteFilter === "local" && p.remoteFriendly) return false;
+        if (settings.enabledCategories.length && !settings.enabledCategories.includes(p.category)) {
+          return false;
+        }
+        if (!q) return true;
+        const blob = `${p.prompt} ${p.category} ${(p.tags || []).join(" ")} ${p.id}`.toLowerCase();
+        return blob.includes(q);
+      })
+      .slice(0, 40);
+  }, [promptPack, search, filterType, filterDifficulty, remoteFilter, settings.enabledCategories]);
+
+  const stats = useMemo(() => {
+    const list = promptPack?.prompts || [];
+    return {
+      total: list.length,
+      remote: list.filter((p) => p.remoteFriendly).length,
+      truths: list.filter((p) => p.type === "truth").length,
+      dares: list.filter((p) => p.type === "dare").length,
+    };
+  }, [promptPack]);
+
   const exportPack = () => {
     if (!promptPack) return;
     const blob = new Blob([JSON.stringify(promptPack, null, 2)], { type: "application/json" });
@@ -57,7 +100,10 @@ export function AdminPanel({
 
   const importFile = async (file: File) => {
     const text = await file.text();
-    const pack = JSON.parse(text) as PromptPack;
+    const parsed = JSON.parse(text);
+    const pack = Array.isArray(parsed)
+      ? ({ id: "imported", name: file.name, version: "1.0.0", categories: [], prompts: parsed } as PromptPack)
+      : (parsed as PromptPack);
     if (!pack.prompts?.length) throw new Error("Invalid pack");
     onImport(pack);
   };
@@ -66,7 +112,15 @@ export function AdminPanel({
     <div className="glass space-y-6 rounded-3xl p-5">
       <div>
         <h3 className="font-display text-lg">Host Controls</h3>
-        <p className="text-sm text-muted">Tune the room before you start.</p>
+        <p className="text-sm text-muted">
+          Tune the room, filter prompt packs, and keep the night remote-friendly.
+        </p>
+        {promptPack && (
+          <p className="mt-2 text-xs text-muted">
+            Catalog · {stats.total} prompts · {stats.remote} remote · {stats.truths} truths · {stats.dares}{" "}
+            dares
+          </p>
+        )}
       </div>
 
       <section className="space-y-3">
@@ -115,7 +169,9 @@ export function AdminPanel({
             onChange={(e) => onChange({ timerSeconds: Number(e.target.value) })}
             className="w-full"
           />
-          <span className="text-muted">{settings.timerSeconds === 0 ? "Off" : `${settings.timerSeconds}s`}</span>
+          <span className="text-muted">
+            {settings.timerSeconds === 0 ? "Off" : `${settings.timerSeconds}s`}
+          </span>
         </label>
       </section>
 
@@ -125,6 +181,7 @@ export function AdminPanel({
             ["skippingEnabled", "Skipping"],
             ["chatEnabled", "Chat"],
             ["voiceEnabled", "Voice"],
+            ["remoteOnly", "Remote-only dares"],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -162,11 +219,7 @@ export function AdminPanel({
                 "rounded-full px-3 py-1.5 text-xs",
                 settings.enabledLevels.includes(l.id) ? "text-ink" : "bg-white/5 text-muted"
               )}
-              style={
-                settings.enabledLevels.includes(l.id)
-                  ? { background: l.color }
-                  : undefined
-              }
+              style={settings.enabledLevels.includes(l.id) ? { background: l.color } : undefined}
             >
               {l.label}
             </button>
@@ -174,8 +227,26 @@ export function AdminPanel({
         </div>
       </section>
 
-      <section className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.18em] text-muted">Categories</p>
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs uppercase tracking-[0.18em] text-muted">Categories</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="text-[11px] text-muted hover:text-cream"
+              onClick={() => onChange({ enabledCategories: [...categories] })}
+            >
+              Enable all
+            </button>
+            <button
+              type="button"
+              className="text-[11px] text-muted hover:text-cream"
+              onClick={() => onChange({ enabledCategories: categories.slice(0, 1) })}
+            >
+              Minimum
+            </button>
+          </div>
+        </div>
         <div className="flex flex-wrap gap-2">
           {categories.map((c) => (
             <button
@@ -189,9 +260,31 @@ export function AdminPanel({
                   : "bg-white/5 text-muted"
               )}
             >
-              {c}
+              {c.replace(/_/g, " ")}
             </button>
           ))}
+        </div>
+        <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.02] p-3">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-muted">Category weights</p>
+          <div className="grid max-h-40 gap-2 overflow-y-auto scrollbar-thin sm:grid-cols-2">
+            {settings.enabledCategories.map((c) => (
+              <label key={c} className="flex items-center gap-2 text-xs capitalize">
+                <span className="w-28 truncate text-muted">{c.replace(/_/g, " ")}</span>
+                <input
+                  type="range"
+                  min={0.25}
+                  max={3}
+                  step={0.25}
+                  value={settings.categoryWeights?.[c] ?? 1}
+                  onChange={(e) => setCategoryWeight(c, Number(e.target.value))}
+                  className="flex-1"
+                />
+                <span className="w-8 text-right text-muted">
+                  {(settings.categoryWeights?.[c] ?? 1).toFixed(2).replace(/\.00$/, "")}
+                </span>
+              </label>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -214,12 +307,88 @@ export function AdminPanel({
         </div>
       </section>
 
+      <section className="space-y-3">
+        <p className="text-xs uppercase tracking-[0.18em] text-muted">Prompt browser</p>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search prompts, tags, categories…"
+            className="h-11 w-full rounded-2xl border border-white/10 bg-white/5 pl-10 pr-4 text-sm outline-none focus:border-[color:var(--color-accent)]/40"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {(["all", "truth", "dare"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setFilterType(t)}
+              className={cn(
+                "rounded-full px-3 py-1 text-xs capitalize",
+                filterType === t ? "bg-white text-ink" : "bg-white/5 text-muted"
+              )}
+            >
+              {t}
+            </button>
+          ))}
+          {(["all", "cool", "spicy", "extreme", "no_boundaries"] as const).map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setFilterDifficulty(d)}
+              className={cn(
+                "rounded-full px-3 py-1 text-xs capitalize",
+                filterDifficulty === d ? "bg-white/20 text-cream" : "bg-white/5 text-muted"
+              )}
+            >
+              {d === "all" ? "all levels" : levelLabel(d)}
+            </button>
+          ))}
+          {(["all", "remote", "local"] as const).map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setRemoteFilter(r)}
+              className={cn(
+                "rounded-full px-3 py-1 text-xs capitalize",
+                remoteFilter === r ? "bg-emerald-400/20 text-emerald-200" : "bg-white/5 text-muted"
+              )}
+            >
+              {r === "local" ? "in-person" : r}
+            </button>
+          ))}
+        </div>
+        <div className="max-h-56 space-y-2 overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-2 scrollbar-thin">
+          {filteredPrompts.length === 0 && (
+            <p className="p-3 text-center text-xs text-muted">No prompts match these filters.</p>
+          )}
+          {filteredPrompts.map((p: PromptRecord) => (
+            <div key={p.id} className="rounded-xl bg-white/[0.03] px-3 py-2">
+              <div className="mb-1 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-wider text-muted">
+                <span>{p.type}</span>
+                <span>·</span>
+                <span>{levelLabel(p.difficulty)}</span>
+                <span>·</span>
+                <span className="capitalize">{p.category.replace(/_/g, " ")}</span>
+                {p.remoteFriendly ? (
+                  <span className="text-emerald-300">remote</span>
+                ) : (
+                  <span className="text-amber-300">in-person</span>
+                )}
+              </div>
+              <p className="text-sm text-cream/90">{p.prompt}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="flex flex-wrap gap-2">
         <Button variant="secondary" size="sm" onClick={exportPack}>
-          <Download className="h-4 w-4" /> Export prompts
+          <Download className="h-4 w-4" /> Export JSON
         </Button>
         <Button variant="secondary" size="sm" onClick={() => fileRef.current?.click()}>
-          <Upload className="h-4 w-4" /> Import JSON
+          <Upload className="h-4 w-4" /> Import pack
         </Button>
         <input
           ref={fileRef}
@@ -232,7 +401,7 @@ export function AdminPanel({
             try {
               await importFile(file);
             } catch {
-              alert("Could not import prompt pack");
+              alert("Could not import prompt pack. Expect a pack object or prompt array.");
             }
             e.target.value = "";
           }}

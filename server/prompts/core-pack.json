@@ -3,83 +3,1108 @@
   "name": "Core Pack",
   "version": "1.0.0",
   "description": "Default Truth or Dare prompts across all levels",
-  "categories": ["personal", "fun", "social", "flirty", "bold", "wild", "intimate", "party"],
+  "author": "Truth or Dare",
+  "locale": "en",
+  "categories": [
+    "bold",
+    "flirty",
+    "fun",
+    "intimate",
+    "party",
+    "personal",
+    "social",
+    "wild"
+  ],
   "prompts": [
-    { "id": "c-t-1", "type": "truth", "level": "cool", "category": "personal", "text": "What's the most embarrassing song on your playlist?" },
-    { "id": "c-t-2", "type": "truth", "level": "cool", "category": "fun", "text": "What's a talent you wish you had?" },
-    { "id": "c-t-3", "type": "truth", "level": "cool", "category": "social", "text": "Who in this room would you trust with a secret?" },
-    { "id": "c-t-4", "type": "truth", "level": "cool", "category": "personal", "text": "What's your go-to comfort food?" },
-    { "id": "c-t-5", "type": "truth", "level": "cool", "category": "fun", "text": "What's the weirdest dream you remember?" },
-    { "id": "c-t-6", "type": "truth", "level": "cool", "category": "social", "text": "Which friend here has the best style?" },
-    { "id": "c-t-7", "type": "truth", "level": "cool", "category": "personal", "text": "What's a hobby you pretend to like more than you do?" },
-    { "id": "c-t-8", "type": "truth", "level": "cool", "category": "fun", "text": "If you could teleport anywhere right now, where would you go?" },
-    { "id": "c-d-1", "type": "dare", "level": "cool", "category": "fun", "text": "Do your best celebrity impression for 15 seconds." },
-    { "id": "c-d-2", "type": "dare", "level": "cool", "category": "social", "text": "Send a voice note complimenting the person to your left." },
-    { "id": "c-d-3", "type": "dare", "level": "cool", "category": "party", "text": "Speak in an accent for the next two rounds." },
-    { "id": "c-d-4", "type": "dare", "level": "cool", "category": "fun", "text": "Show the last photo in your camera roll (that you're okay sharing)." },
-    { "id": "c-d-5", "type": "dare", "level": "cool", "category": "social", "text": "Let the group invent a nickname for you that sticks tonight." },
-    { "id": "c-d-6", "type": "dare", "level": "cool", "category": "party", "text": "Do 10 jumping jacks on camera." },
-    { "id": "c-d-7", "type": "dare", "level": "cool", "category": "fun", "text": "Draw a portrait of another player in 30 seconds and show it." },
-    { "id": "c-d-8", "type": "dare", "level": "cool", "category": "social", "text": "Tell a joke — if no one laughs, you owe another dare next turn." },
-
-    { "id": "s-t-1", "type": "truth", "level": "spicy", "category": "flirty", "text": "Who was your last crush, and what drew you in?" },
-    { "id": "s-t-2", "type": "truth", "level": "spicy", "category": "personal", "text": "What's the boldest thing you've ever done on a night out?" },
-    { "id": "s-t-3", "type": "truth", "level": "spicy", "category": "social", "text": "Who in this room would you most want to go on a spontaneous trip with?" },
-    { "id": "s-t-4", "type": "truth", "level": "spicy", "category": "flirty", "text": "Have you ever had a crush on a friend's partner? Be honest." },
-    { "id": "s-t-5", "type": "truth", "level": "spicy", "category": "bold", "text": "What's a text you regret sending?" },
-    { "id": "s-t-6", "type": "truth", "level": "spicy", "category": "personal", "text": "What's your biggest turn-on that surprises people?" },
-    { "id": "s-t-7", "type": "truth", "level": "spicy", "category": "flirty", "text": "Rate everyone in the room's smile from 1–10 (no ties)." },
-    { "id": "s-t-8", "type": "truth", "level": "spicy", "category": "social", "text": "Who here would you kiss if you had to choose one person?" },
-    { "id": "s-d-1", "type": "dare", "level": "spicy", "category": "flirty", "text": "Compliment the person across from you… in the most dramatic way possible." },
-    { "id": "s-d-2", "type": "dare", "level": "spicy", "category": "party", "text": "Slow dance to a song of the group's choosing for 20 seconds." },
-    { "id": "s-d-3", "type": "dare", "level": "spicy", "category": "bold", "text": "Let someone else write a flirty bio for your dating profile out loud." },
-    { "id": "s-d-4", "type": "dare", "level": "spicy", "category": "social", "text": "Call or voice-message someone and say something silly the group scripts." },
-    { "id": "s-d-5", "type": "dare", "level": "spicy", "category": "flirty", "text": "Give a 10-second seductive stare to each player." },
-    { "id": "s-d-6", "type": "dare", "level": "spicy", "category": "party", "text": "Let the group rearrange your hair however they want." },
-    { "id": "s-d-7", "type": "dare", "level": "spicy", "category": "bold", "text": "Post a story saying 'Ask me anything' for 5 minutes (or screenshot proof you would)." },
-    { "id": "s-d-8", "type": "dare", "level": "spicy", "category": "flirty", "text": "Read a romantic poem to someone in the room with full commitment." },
-
-    { "id": "e-t-1", "type": "truth", "level": "extreme", "category": "bold", "text": "What's the most scandalous rumor about you — and is any of it true?" },
-    { "id": "e-t-2", "type": "truth", "level": "extreme", "category": "personal", "text": "What's something you've never told your closest friends?" },
-    { "id": "e-t-3", "type": "truth", "level": "extreme", "category": "wild", "text": "Describe your wildest night in one sentence — no filtering." },
-    { "id": "e-t-4", "type": "truth", "level": "extreme", "category": "social", "text": "Who in this room intimidates you the most and why?" },
-    { "id": "e-t-5", "type": "truth", "level": "extreme", "category": "bold", "text": "Have you ever ghosted someone? Spill the details." },
-    { "id": "e-t-6", "type": "truth", "level": "extreme", "category": "personal", "text": "What's your most toxic trait in relationships?" },
-    { "id": "e-t-7", "type": "truth", "level": "extreme", "category": "wild", "text": "What's the riskiest place you've ever hooked up?" },
-    { "id": "e-t-8", "type": "truth", "level": "extreme", "category": "bold", "text": "Name someone you've stalked online more than you should admit." },
-    { "id": "e-d-1", "type": "dare", "level": "extreme", "category": "wild", "text": "Let the group go through your recent search history for 30 seconds." },
-    { "id": "e-d-2", "type": "dare", "level": "extreme", "category": "party", "text": "Eat something weird the group invents from what's nearby." },
-    { "id": "e-d-3", "type": "dare", "level": "extreme", "category": "bold", "text": "Text your ex 'I miss you' — then show the screen (or take a skip)." },
-    { "id": "e-d-4", "type": "dare", "level": "extreme", "category": "social", "text": "Imitate another player's most annoying habit until they laugh." },
-    { "id": "e-d-5", "type": "dare", "level": "extreme", "category": "wild", "text": "Do a dramatic confession of love to a random object for 20 seconds." },
-    { "id": "e-d-6", "type": "dare", "level": "extreme", "category": "party", "text": "Let someone else control your phone for one safe, non-destructive minute." },
-    { "id": "e-d-7", "type": "dare", "level": "extreme", "category": "bold", "text": "Wear your clothes inside-out for the next three rounds." },
-    { "id": "e-d-8", "type": "dare", "level": "extreme", "category": "wild", "text": "Sing a song chosen by the group at maximum volume." },
-
-    { "id": "n-t-1", "type": "truth", "level": "no_boundaries", "category": "intimate", "text": "What's your deepest fantasy you rarely say out loud?" },
-    { "id": "n-t-2", "type": "truth", "level": "no_boundaries", "category": "bold", "text": "What's the most inappropriate thought you've had about someone in this room?" },
-    { "id": "n-t-3", "type": "truth", "level": "no_boundaries", "category": "intimate", "text": "Describe your ideal night with someone — no soft edges." },
-    { "id": "n-t-4", "type": "truth", "level": "no_boundaries", "category": "wild", "text": "What's a hard limit you've crossed and regretted?" },
-    { "id": "n-t-5", "type": "truth", "level": "no_boundaries", "category": "intimate", "text": "Who here would you choose for a one-night adventure — and why them?" },
-    { "id": "n-t-6", "type": "truth", "level": "no_boundaries", "category": "bold", "text": "What's the most jealous you've ever been? Tell the story." },
-    { "id": "n-t-7", "type": "truth", "level": "no_boundaries", "category": "wild", "text": "Share the most NSFW compliment you've ever received." },
-    { "id": "n-t-8", "type": "truth", "level": "no_boundaries", "category": "intimate", "text": "What would you do if you had 24 hours with no consequences?" },
-    { "id": "n-d-1", "type": "dare", "level": "no_boundaries", "category": "intimate", "text": "Whisper something filthy to the person of the group's choosing (off-mic if needed)." },
-    { "id": "n-d-2", "type": "dare", "level": "no_boundaries", "category": "wild", "text": "Act out your best 'movie seduction' scene for 30 seconds." },
-    { "id": "n-d-3", "type": "dare", "level": "no_boundaries", "category": "bold", "text": "Let the group choose a dare that's one level spicier than this one." },
-    { "id": "n-d-4", "type": "dare", "level": "no_boundaries", "category": "intimate", "text": "Describe in detail how you'd kiss someone in this room." },
-    { "id": "n-d-5", "type": "dare", "level": "no_boundaries", "category": "wild", "text": "Remove one accessory or outer layer for the rest of the game." },
-    { "id": "n-d-6", "type": "dare", "level": "no_boundaries", "category": "party", "text": "Roleplay being someone's 'date' for the next two rounds." },
-    { "id": "n-d-7", "type": "dare", "level": "no_boundaries", "category": "bold", "text": "Answer the next truth from another player with zero filter." },
-    { "id": "n-d-8", "type": "dare", "level": "no_boundaries", "category": "intimate", "text": "Give a slow, deliberate compliment to each player about something physical." },
-
-    { "id": "cp-t-1", "type": "truth", "level": "spicy", "category": "flirty", "text": "What first attracted you to your partner?", "couples": true },
-    { "id": "cp-t-2", "type": "truth", "level": "extreme", "category": "intimate", "text": "What's one thing you wish your partner did more often?", "couples": true },
-    { "id": "cp-d-1", "type": "dare", "level": "spicy", "category": "flirty", "text": "Feed each other something while maintaining eye contact.", "couples": true },
-    { "id": "cp-d-2", "type": "dare", "level": "extreme", "category": "intimate", "text": "Give your partner a 20-second massage on camera.", "couples": true },
-
-    { "id": "tm-d-1", "type": "dare", "level": "cool", "category": "party", "text": "Your team must invent and perform a 10-second cheer.", "team": true },
-    { "id": "tm-d-2", "type": "dare", "level": "spicy", "category": "social", "text": "Your whole team must roast the other team for 20 seconds — keep it playful.", "team": true },
-    { "id": "tm-t-1", "type": "truth", "level": "cool", "category": "social", "text": "As a team, vote: who on the other team would survive a reality show?", "team": true }
+    {
+      "id": "c-t-1",
+      "type": "truth",
+      "category": "personal",
+      "difficulty": "cool",
+      "prompt": "What's the most embarrassing song on your playlist?",
+      "remoteFriendly": true,
+      "tags": [
+        "cool",
+        "truth",
+        "personal",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "c-t-2",
+      "type": "truth",
+      "category": "fun",
+      "difficulty": "cool",
+      "prompt": "What's a talent you wish you had?",
+      "remoteFriendly": true,
+      "tags": [
+        "cool",
+        "truth",
+        "fun",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "c-t-3",
+      "type": "truth",
+      "category": "social",
+      "difficulty": "cool",
+      "prompt": "Who in this room would you trust with a secret?",
+      "remoteFriendly": true,
+      "tags": [
+        "cool",
+        "truth",
+        "social",
+        "remote",
+        "confession"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "c-t-4",
+      "type": "truth",
+      "category": "personal",
+      "difficulty": "cool",
+      "prompt": "What's your go-to comfort food?",
+      "remoteFriendly": true,
+      "tags": [
+        "cool",
+        "truth",
+        "personal",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "c-t-5",
+      "type": "truth",
+      "category": "fun",
+      "difficulty": "cool",
+      "prompt": "What's the weirdest dream you remember?",
+      "remoteFriendly": true,
+      "tags": [
+        "cool",
+        "truth",
+        "fun",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "c-t-6",
+      "type": "truth",
+      "category": "social",
+      "difficulty": "cool",
+      "prompt": "Which friend here has the best style?",
+      "remoteFriendly": true,
+      "tags": [
+        "cool",
+        "truth",
+        "social",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "c-t-7",
+      "type": "truth",
+      "category": "personal",
+      "difficulty": "cool",
+      "prompt": "What's a hobby you pretend to like more than you do?",
+      "remoteFriendly": true,
+      "tags": [
+        "cool",
+        "truth",
+        "personal",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "c-t-8",
+      "type": "truth",
+      "category": "fun",
+      "difficulty": "cool",
+      "prompt": "If you could teleport anywhere right now, where would you go?",
+      "remoteFriendly": true,
+      "tags": [
+        "cool",
+        "truth",
+        "fun",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "c-d-1",
+      "type": "dare",
+      "category": "fun",
+      "difficulty": "cool",
+      "prompt": "Do your best celebrity impression for 15 seconds.",
+      "remoteFriendly": true,
+      "tags": [
+        "cool",
+        "dare",
+        "fun",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "c-d-2",
+      "type": "dare",
+      "category": "social",
+      "difficulty": "cool",
+      "prompt": "Send a voice note complimenting the person to your left.",
+      "remoteFriendly": true,
+      "tags": [
+        "cool",
+        "dare",
+        "social",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "c-d-3",
+      "type": "dare",
+      "category": "party",
+      "difficulty": "cool",
+      "prompt": "Speak in an accent for the next two rounds.",
+      "remoteFriendly": true,
+      "tags": [
+        "cool",
+        "dare",
+        "party",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "c-d-4",
+      "type": "dare",
+      "category": "fun",
+      "difficulty": "cool",
+      "prompt": "Show the last photo in your camera roll (that you're okay sharing).",
+      "remoteFriendly": true,
+      "tags": [
+        "cool",
+        "dare",
+        "fun",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "c-d-5",
+      "type": "dare",
+      "category": "social",
+      "difficulty": "cool",
+      "prompt": "Let the group invent a nickname for you that sticks tonight.",
+      "remoteFriendly": true,
+      "tags": [
+        "cool",
+        "dare",
+        "social",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "c-d-6",
+      "type": "dare",
+      "category": "party",
+      "difficulty": "cool",
+      "prompt": "Do 10 jumping jacks on camera.",
+      "remoteFriendly": false,
+      "tags": [
+        "cool",
+        "dare",
+        "party",
+        "in_person"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "c-d-7",
+      "type": "dare",
+      "category": "fun",
+      "difficulty": "cool",
+      "prompt": "Draw a portrait of another player in 30 seconds and show it.",
+      "remoteFriendly": true,
+      "tags": [
+        "cool",
+        "dare",
+        "fun",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "c-d-8",
+      "type": "dare",
+      "category": "social",
+      "difficulty": "cool",
+      "prompt": "Tell a joke — if no one laughs, you owe another dare next turn.",
+      "remoteFriendly": true,
+      "tags": [
+        "cool",
+        "dare",
+        "social",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "s-t-1",
+      "type": "truth",
+      "category": "flirty",
+      "difficulty": "spicy",
+      "prompt": "Who was your last crush, and what drew you in?",
+      "remoteFriendly": true,
+      "tags": [
+        "spicy",
+        "truth",
+        "flirty",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "s-t-2",
+      "type": "truth",
+      "category": "personal",
+      "difficulty": "spicy",
+      "prompt": "What's the boldest thing you've ever done on a night out?",
+      "remoteFriendly": true,
+      "tags": [
+        "spicy",
+        "truth",
+        "personal",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "s-t-3",
+      "type": "truth",
+      "category": "social",
+      "difficulty": "spicy",
+      "prompt": "Who in this room would you most want to go on a spontaneous trip with?",
+      "remoteFriendly": true,
+      "tags": [
+        "spicy",
+        "truth",
+        "social",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "s-t-4",
+      "type": "truth",
+      "category": "flirty",
+      "difficulty": "spicy",
+      "prompt": "Have you ever had a crush on a friend's partner? Be honest.",
+      "remoteFriendly": true,
+      "tags": [
+        "spicy",
+        "truth",
+        "flirty",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "s-t-5",
+      "type": "truth",
+      "category": "bold",
+      "difficulty": "spicy",
+      "prompt": "What's a text you regret sending?",
+      "remoteFriendly": true,
+      "tags": [
+        "spicy",
+        "truth",
+        "bold",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "s-t-6",
+      "type": "truth",
+      "category": "personal",
+      "difficulty": "spicy",
+      "prompt": "What's your biggest turn-on that surprises people?",
+      "remoteFriendly": true,
+      "tags": [
+        "spicy",
+        "truth",
+        "personal",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "s-t-7",
+      "type": "truth",
+      "category": "flirty",
+      "difficulty": "spicy",
+      "prompt": "Rate everyone in the room's smile from 1–10 (no ties).",
+      "remoteFriendly": true,
+      "tags": [
+        "spicy",
+        "truth",
+        "flirty",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "s-t-8",
+      "type": "truth",
+      "category": "social",
+      "difficulty": "spicy",
+      "prompt": "Who here would you kiss if you had to choose one person?",
+      "remoteFriendly": true,
+      "tags": [
+        "spicy",
+        "truth",
+        "social",
+        "remote",
+        "kissing"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "s-d-1",
+      "type": "dare",
+      "category": "flirty",
+      "difficulty": "spicy",
+      "prompt": "Compliment the person across from you… in the most dramatic way possible.",
+      "remoteFriendly": true,
+      "tags": [
+        "spicy",
+        "dare",
+        "flirty",
+        "remote",
+        "social"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "s-d-2",
+      "type": "dare",
+      "category": "party",
+      "difficulty": "spicy",
+      "prompt": "Slow dance to a song of the group's choosing for 20 seconds.",
+      "remoteFriendly": false,
+      "tags": [
+        "spicy",
+        "dare",
+        "party",
+        "in_person"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "s-d-3",
+      "type": "dare",
+      "category": "bold",
+      "difficulty": "spicy",
+      "prompt": "Let someone else write a flirty bio for your dating profile out loud.",
+      "remoteFriendly": true,
+      "tags": [
+        "spicy",
+        "dare",
+        "bold",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "s-d-4",
+      "type": "dare",
+      "category": "social",
+      "difficulty": "spicy",
+      "prompt": "Call or voice-message someone and say something silly the group scripts.",
+      "remoteFriendly": true,
+      "tags": [
+        "spicy",
+        "dare",
+        "social",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "s-d-5",
+      "type": "dare",
+      "category": "flirty",
+      "difficulty": "spicy",
+      "prompt": "Give a 10-second seductive stare to each player.",
+      "remoteFriendly": true,
+      "tags": [
+        "spicy",
+        "dare",
+        "flirty",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "s-d-6",
+      "type": "dare",
+      "category": "party",
+      "difficulty": "spicy",
+      "prompt": "Let the group rearrange your hair however they want.",
+      "remoteFriendly": false,
+      "tags": [
+        "spicy",
+        "dare",
+        "party",
+        "in_person"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "s-d-7",
+      "type": "dare",
+      "category": "bold",
+      "difficulty": "spicy",
+      "prompt": "Post a story saying 'Ask me anything' for 5 minutes (or screenshot proof you would).",
+      "remoteFriendly": true,
+      "tags": [
+        "spicy",
+        "dare",
+        "bold",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "s-d-8",
+      "type": "dare",
+      "category": "flirty",
+      "difficulty": "spicy",
+      "prompt": "Read a romantic poem to someone in the room with full commitment.",
+      "remoteFriendly": true,
+      "tags": [
+        "spicy",
+        "dare",
+        "flirty",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "e-t-1",
+      "type": "truth",
+      "category": "bold",
+      "difficulty": "extreme",
+      "prompt": "What's the most scandalous rumor about you — and is any of it true?",
+      "remoteFriendly": true,
+      "tags": [
+        "extreme",
+        "truth",
+        "bold",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "e-t-2",
+      "type": "truth",
+      "category": "personal",
+      "difficulty": "extreme",
+      "prompt": "What's something you've never told your closest friends?",
+      "remoteFriendly": true,
+      "tags": [
+        "extreme",
+        "truth",
+        "personal",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "e-t-3",
+      "type": "truth",
+      "category": "wild",
+      "difficulty": "extreme",
+      "prompt": "Describe your wildest night in one sentence — no filtering.",
+      "remoteFriendly": true,
+      "tags": [
+        "extreme",
+        "truth",
+        "wild",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "e-t-4",
+      "type": "truth",
+      "category": "social",
+      "difficulty": "extreme",
+      "prompt": "Who in this room intimidates you the most and why?",
+      "remoteFriendly": true,
+      "tags": [
+        "extreme",
+        "truth",
+        "social",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "e-t-5",
+      "type": "truth",
+      "category": "bold",
+      "difficulty": "extreme",
+      "prompt": "Have you ever ghosted someone? Spill the details.",
+      "remoteFriendly": true,
+      "tags": [
+        "extreme",
+        "truth",
+        "bold",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "e-t-6",
+      "type": "truth",
+      "category": "personal",
+      "difficulty": "extreme",
+      "prompt": "What's your most toxic trait in relationships?",
+      "remoteFriendly": true,
+      "tags": [
+        "extreme",
+        "truth",
+        "personal",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "e-t-7",
+      "type": "truth",
+      "category": "wild",
+      "difficulty": "extreme",
+      "prompt": "What's the riskiest place you've ever hooked up?",
+      "remoteFriendly": true,
+      "tags": [
+        "extreme",
+        "truth",
+        "wild",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "e-t-8",
+      "type": "truth",
+      "category": "bold",
+      "difficulty": "extreme",
+      "prompt": "Name someone you've stalked online more than you should admit.",
+      "remoteFriendly": true,
+      "tags": [
+        "extreme",
+        "truth",
+        "bold",
+        "remote",
+        "confession"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "e-d-1",
+      "type": "dare",
+      "category": "wild",
+      "difficulty": "extreme",
+      "prompt": "Let the group go through your recent search history for 30 seconds.",
+      "remoteFriendly": true,
+      "tags": [
+        "extreme",
+        "dare",
+        "wild",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "e-d-2",
+      "type": "dare",
+      "category": "party",
+      "difficulty": "extreme",
+      "prompt": "Eat something weird the group invents from what's nearby.",
+      "remoteFriendly": true,
+      "tags": [
+        "extreme",
+        "dare",
+        "party",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "e-d-3",
+      "type": "dare",
+      "category": "bold",
+      "difficulty": "extreme",
+      "prompt": "Text your ex 'I miss you' — then show the screen (or take a skip).",
+      "remoteFriendly": true,
+      "tags": [
+        "extreme",
+        "dare",
+        "bold",
+        "remote",
+        "exes"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "e-d-4",
+      "type": "dare",
+      "category": "social",
+      "difficulty": "extreme",
+      "prompt": "Imitate another player's most annoying habit until they laugh.",
+      "remoteFriendly": true,
+      "tags": [
+        "extreme",
+        "dare",
+        "social",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "e-d-5",
+      "type": "dare",
+      "category": "wild",
+      "difficulty": "extreme",
+      "prompt": "Do a dramatic confession of love to a random object for 20 seconds.",
+      "remoteFriendly": true,
+      "tags": [
+        "extreme",
+        "dare",
+        "wild",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "e-d-6",
+      "type": "dare",
+      "category": "party",
+      "difficulty": "extreme",
+      "prompt": "Let someone else control your phone for one safe, non-destructive minute.",
+      "remoteFriendly": true,
+      "tags": [
+        "extreme",
+        "dare",
+        "party",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "e-d-7",
+      "type": "dare",
+      "category": "bold",
+      "difficulty": "extreme",
+      "prompt": "Wear your clothes inside-out for the next three rounds.",
+      "remoteFriendly": false,
+      "tags": [
+        "extreme",
+        "dare",
+        "bold",
+        "in_person"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "e-d-8",
+      "type": "dare",
+      "category": "wild",
+      "difficulty": "extreme",
+      "prompt": "Sing a song chosen by the group at maximum volume.",
+      "remoteFriendly": true,
+      "tags": [
+        "extreme",
+        "dare",
+        "wild",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "n-t-1",
+      "type": "truth",
+      "category": "intimate",
+      "difficulty": "no_boundaries",
+      "prompt": "What's your deepest fantasy you rarely say out loud?",
+      "remoteFriendly": true,
+      "tags": [
+        "no_boundaries",
+        "truth",
+        "intimate",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "n-t-2",
+      "type": "truth",
+      "category": "bold",
+      "difficulty": "no_boundaries",
+      "prompt": "What's the most inappropriate thought you've had about someone in this room?",
+      "remoteFriendly": true,
+      "tags": [
+        "no_boundaries",
+        "truth",
+        "bold",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "n-t-3",
+      "type": "truth",
+      "category": "intimate",
+      "difficulty": "no_boundaries",
+      "prompt": "Describe your ideal night with someone — no soft edges.",
+      "remoteFriendly": true,
+      "tags": [
+        "no_boundaries",
+        "truth",
+        "intimate",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "n-t-4",
+      "type": "truth",
+      "category": "wild",
+      "difficulty": "no_boundaries",
+      "prompt": "What's a hard limit you've crossed and regretted?",
+      "remoteFriendly": true,
+      "tags": [
+        "no_boundaries",
+        "truth",
+        "wild",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "n-t-5",
+      "type": "truth",
+      "category": "intimate",
+      "difficulty": "no_boundaries",
+      "prompt": "Who here would you choose for a one-night adventure — and why them?",
+      "remoteFriendly": true,
+      "tags": [
+        "no_boundaries",
+        "truth",
+        "intimate",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "n-t-6",
+      "type": "truth",
+      "category": "bold",
+      "difficulty": "no_boundaries",
+      "prompt": "What's the most jealous you've ever been? Tell the story.",
+      "remoteFriendly": true,
+      "tags": [
+        "no_boundaries",
+        "truth",
+        "bold",
+        "remote",
+        "jealousy"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "n-t-7",
+      "type": "truth",
+      "category": "wild",
+      "difficulty": "no_boundaries",
+      "prompt": "Share the most NSFW compliment you've ever received.",
+      "remoteFriendly": true,
+      "tags": [
+        "no_boundaries",
+        "truth",
+        "wild",
+        "remote",
+        "social"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "n-t-8",
+      "type": "truth",
+      "category": "intimate",
+      "difficulty": "no_boundaries",
+      "prompt": "What would you do if you had 24 hours with no consequences?",
+      "remoteFriendly": true,
+      "tags": [
+        "no_boundaries",
+        "truth",
+        "intimate",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "n-d-1",
+      "type": "dare",
+      "category": "intimate",
+      "difficulty": "no_boundaries",
+      "prompt": "Whisper something filthy to the person of the group's choosing (off-mic if needed).",
+      "remoteFriendly": true,
+      "tags": [
+        "no_boundaries",
+        "dare",
+        "intimate",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "n-d-2",
+      "type": "dare",
+      "category": "wild",
+      "difficulty": "no_boundaries",
+      "prompt": "Act out your best 'movie seduction' scene for 30 seconds.",
+      "remoteFriendly": true,
+      "tags": [
+        "no_boundaries",
+        "dare",
+        "wild",
+        "remote",
+        "roleplay"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "n-d-3",
+      "type": "dare",
+      "category": "bold",
+      "difficulty": "no_boundaries",
+      "prompt": "Let the group choose a dare that's one level spicier than this one.",
+      "remoteFriendly": true,
+      "tags": [
+        "no_boundaries",
+        "dare",
+        "bold",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "n-d-4",
+      "type": "dare",
+      "category": "intimate",
+      "difficulty": "no_boundaries",
+      "prompt": "Describe in detail how you'd kiss someone in this room.",
+      "remoteFriendly": true,
+      "tags": [
+        "no_boundaries",
+        "dare",
+        "intimate",
+        "remote",
+        "kissing"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "n-d-5",
+      "type": "dare",
+      "category": "wild",
+      "difficulty": "no_boundaries",
+      "prompt": "Remove one accessory or outer layer for the rest of the game.",
+      "remoteFriendly": false,
+      "tags": [
+        "no_boundaries",
+        "dare",
+        "wild",
+        "in_person"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "n-d-6",
+      "type": "dare",
+      "category": "party",
+      "difficulty": "no_boundaries",
+      "prompt": "Roleplay being someone's 'date' for the next two rounds.",
+      "remoteFriendly": true,
+      "tags": [
+        "no_boundaries",
+        "dare",
+        "party",
+        "remote",
+        "roleplay"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "n-d-7",
+      "type": "dare",
+      "category": "bold",
+      "difficulty": "no_boundaries",
+      "prompt": "Answer the next truth from another player with zero filter.",
+      "remoteFriendly": true,
+      "tags": [
+        "no_boundaries",
+        "dare",
+        "bold",
+        "remote"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "n-d-8",
+      "type": "dare",
+      "category": "intimate",
+      "difficulty": "no_boundaries",
+      "prompt": "Give a slow, deliberate compliment to each player about something physical.",
+      "remoteFriendly": true,
+      "tags": [
+        "no_boundaries",
+        "dare",
+        "intimate",
+        "remote",
+        "social"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "cp-t-1",
+      "type": "truth",
+      "category": "flirty",
+      "difficulty": "spicy",
+      "prompt": "What first attracted you to your partner?",
+      "remoteFriendly": true,
+      "tags": [
+        "spicy",
+        "truth",
+        "flirty",
+        "remote",
+        "couples"
+      ],
+      "weight": 1,
+      "couples": true
+    },
+    {
+      "id": "cp-t-2",
+      "type": "truth",
+      "category": "intimate",
+      "difficulty": "extreme",
+      "prompt": "What's one thing you wish your partner did more often?",
+      "remoteFriendly": true,
+      "tags": [
+        "extreme",
+        "truth",
+        "intimate",
+        "remote",
+        "couples"
+      ],
+      "weight": 1,
+      "couples": true
+    },
+    {
+      "id": "cp-d-1",
+      "type": "dare",
+      "category": "flirty",
+      "difficulty": "spicy",
+      "prompt": "Feed each other something while maintaining eye contact.",
+      "remoteFriendly": false,
+      "tags": [
+        "spicy",
+        "dare",
+        "flirty",
+        "in_person",
+        "couples"
+      ],
+      "weight": 1,
+      "couples": true
+    },
+    {
+      "id": "cp-d-2",
+      "type": "dare",
+      "category": "intimate",
+      "difficulty": "extreme",
+      "prompt": "Give your partner a 20-second massage on camera.",
+      "remoteFriendly": false,
+      "tags": [
+        "extreme",
+        "dare",
+        "intimate",
+        "in_person",
+        "couples"
+      ],
+      "weight": 1,
+      "couples": true
+    },
+    {
+      "id": "tm-d-1",
+      "type": "dare",
+      "category": "party",
+      "difficulty": "cool",
+      "prompt": "Your team must invent and perform a 10-second cheer.",
+      "remoteFriendly": true,
+      "tags": [
+        "cool",
+        "dare",
+        "party",
+        "remote",
+        "team"
+      ],
+      "weight": 1,
+      "team": true
+    },
+    {
+      "id": "tm-d-2",
+      "type": "dare",
+      "category": "social",
+      "difficulty": "spicy",
+      "prompt": "Your whole team must roast the other team for 20 seconds — keep it playful.",
+      "remoteFriendly": true,
+      "tags": [
+        "spicy",
+        "dare",
+        "social",
+        "remote",
+        "team"
+      ],
+      "weight": 1,
+      "team": true
+    },
+    {
+      "id": "tm-t-1",
+      "type": "truth",
+      "category": "social",
+      "difficulty": "cool",
+      "prompt": "As a team, vote: who on the other team would survive a reality show?",
+      "remoteFriendly": true,
+      "tags": [
+        "cool",
+        "truth",
+        "social",
+        "remote",
+        "team"
+      ],
+      "weight": 1,
+      "team": true
+    }
   ]
 }

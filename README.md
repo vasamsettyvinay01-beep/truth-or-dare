@@ -46,31 +46,39 @@ Classic · Random · Spin Wheel · Survival · Couples · Team Battle · Last St
 
 ## Custom prompts
 
-Default pack: `server/prompts/core-pack.json`
+Default packs live in `server/prompts/` (auto-loaded):
 
-Hosts can **export / import** JSON packs from the lobby admin panel. Schema:
+- `core-pack.json`
+- `adult-romance-pack.json` (~1080 romance / flirting prompts)
+
+Hosts can **export / import** JSON packs from the lobby admin panel. Canonical schema:
 
 ```json
 {
   "id": "my-pack",
   "name": "My Pack",
   "version": "1.0.0",
-  "categories": ["fun", "wild"],
+  "categories": ["romance", "flirting"],
   "prompts": [
     {
       "id": "unique-id",
       "type": "truth",
-      "level": "cool",
-      "category": "fun",
-      "text": "Your prompt here"
+      "category": "romance",
+      "difficulty": "cool",
+      "prompt": "Your prompt here",
+      "remoteFriendly": true,
+      "tags": ["cool", "truth", "romance", "remote"],
+      "weight": 1
     }
   ]
 }
 ```
 
-`level`: `cool` | `spicy` | `extreme` | `no_boundaries`  
+See `server/prompts/PROMPT_ENGINE.md` for search, weighting, and remote-play details.
+
+`difficulty`: `cool` | `spicy` | `extreme` | `no_boundaries`  
 `type`: `truth` | `dare`  
-Optional flags: `couples`, `team`
+Legacy `level` / `text` fields are still accepted and normalized on load.
 
 ## Architecture
 

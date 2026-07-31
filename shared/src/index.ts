@@ -58,23 +58,112 @@ export const ROOM_CODE_LENGTH = 6;
 export const ROOM_IDLE_TTL_MS = 1000 * 60 * 60; // 1 hour
 export const RECONNECT_GRACE_MS = 1000 * 60 * 5; // 5 minutes
 
-export interface PromptItem {
+/** Canonical difficulty — same values as GameLevel */
+export type PromptDifficulty = GameLevel;
+
+export const PROMPT_CATEGORIES = [
+  "romance",
+  "kissing",
+  "crushes",
+  "flirting",
+  "dating",
+  "relationships",
+  "confessions",
+  "embarrassing",
+  "party",
+  "first_impressions",
+  "exes",
+  "jealousy",
+  "red_flags",
+  "green_flags",
+  "secrets",
+] as const;
+
+export type PromptCategoryId = (typeof PROMPT_CATEGORIES)[number] | string;
+
+/**
+ * Canonical prompt record for packs and the prompt engine.
+ * Designed for large community packs and remote (video-call) play.
+ */
+export interface PromptRecord {
   id: string;
   type: ChallengeType;
-  level: GameLevel;
   category: string;
-  text: string;
+  difficulty: PromptDifficulty;
+  prompt: string;
+  remoteFriendly: boolean;
+  tags: string[];
+  /** Relative pick weight (default 1). Higher = more likely when weighted. */
+  weight?: number;
   couples?: boolean;
   team?: boolean;
 }
+
+/** @deprecated Use PromptRecord — kept for gradual migration */
+export type PromptItem = PromptRecord & {
+  /** @deprecated use difficulty */
+  level?: GameLevel;
+  /** @deprecated use prompt */
+  text?: string;
+};
 
 export interface PromptPack {
   id: string;
   name: string;
   version: string;
   description?: string;
+  author?: string;
+  locale?: string;
   categories: string[];
-  prompts: PromptItem[];
+  prompts: PromptRecord[];
+}
+
+export interface PromptPackSummary {
+  id: string;
+  name: string;
+  version: string;
+  description?: string;
+  promptCount: number;
+  categories: string[];
+  tags: string[];
+  difficulties: PromptDifficulty[];
+  remoteFriendlyCount: number;
+}
+
+export interface PromptQuery {
+  type?: ChallengeType;
+  categories?: string[];
+  difficulties?: PromptDifficulty[];
+  tags?: string[];
+  /** Case-insensitive match against prompt text, category, tags, id */
+  search?: string;
+  remoteOnly?: boolean;
+  excludeIds?: string[];
+  couples?: boolean | "any";
+  team?: boolean | "any";
+  limit?: number;
+  offset?: number;
+}
+
+export interface PromptPickOptions {
+  type: ChallengeType;
+  difficulty: PromptDifficulty;
+  enabledCategories: string[];
+  usedIds: Iterable<string>;
+  remoteOnly?: boolean;
+  mode?: GameMode;
+  /** Prefer category weights from room settings */
+  categoryWeights?: Record<string, number>;
+  difficultyWeight?: number;
+  /** When pool exhausted, refuse repeats (default true for premium freshness) */
+  strictNoRepeat?: boolean;
+  weighted?: boolean;
+}
+
+export interface PromptPickResult {
+  prompt: PromptRecord;
+  poolSize: number;
+  repeated: boolean;
 }
 
 export interface Player {
@@ -114,6 +203,10 @@ export interface RoomSettings {
   playerOrder: PlayerOrder;
   enabledCategories: string[];
   enabledLevels: GameLevel[];
+  /** Prefer video-call / browser-safe dares */
+  remoteOnly: boolean;
+  /** Optional per-category pick weights (1 = default) */
+  categoryWeights: Record<string, number>;
   gameMode: GameMode;
   voiceEnabled: boolean;
   chatEnabled: boolean;
@@ -126,6 +219,8 @@ export interface CurrentChallenge {
   text: string;
   category: string;
   level: GameLevel;
+  tags: string[];
+  remoteFriendly: boolean;
   assignedAt: number;
   timerEndsAt: number | null;
 }
@@ -172,8 +267,15 @@ export interface ClientToServerEvents {
   "room:kick": (playerId: string) => void;
   "room:transfer-host": (playerId: string) => void;
   "room:select-level": (level: GameLevel) => void;
-  "room:import-prompts": (pack: PromptPack) => void;
+  "room:import-prompts": (pack: PromptPack | PromptRecord[] | { prompts: unknown[] }) => void;
   "room:return-lobby": () => void;
+  "prompts:query": (
+    query: PromptQuery,
+    ack?: (res: AckResult<{ total: number; prompts: PromptRecord[]; summary: PromptPackSummary }>) => void
+  ) => void;
+  "prompts:export": (
+    ack?: (res: AckResult<{ pack: PromptPack }>) => void
+  ) => void;
   "game:choose": (type: ChallengeType) => void;
   "game:spin": () => void;
   "game:action": (action: TurnAction) => void;
@@ -196,6 +298,7 @@ export interface ServerToClientEvents {
   "voice:signal": (payload: { from: string; data: unknown }) => void;
   "voice:peers": (peerIds: string[]) => void;
   "prompts:pack": (pack: PromptPack) => void;
+  "prompts:summary": (summary: PromptPackSummary) => void;
 }
 
 export type AckResult<T> =
@@ -210,10 +313,51 @@ export function createDefaultSettings(overrides?: Partial<RoomSettings>): RoomSe
     playerOrder: "sequential",
     enabledCategories: [],
     enabledLevels: ["cool", "spicy", "extreme", "no_boundaries"],
+    remoteOnly: true,
+    categoryWeights: {},
     gameMode: "classic",
     voiceEnabled: false,
     chatEnabled: true,
     theme: "midnight",
     ...overrides,
   };
+}
+
+/** Normalize legacy packs that used level/text into PromptRecord */
+export function normalizePromptRecord(raw: Partial<PromptRecord> & {
+  level?: string;
+  text?: string;
+  difficulty?: string;
+  prompt?: string;
+}, fallbackId: string): PromptRecord {
+  const difficulty = normalizeDifficulty(raw.difficulty || raw.level || "cool");
+  const prompt = String(raw.prompt ?? raw.text ?? "").trim();
+  const category = slugCategory(String(raw.category || "party"));
+  return {
+    id: String(raw.id || fallbackId),
+    type: raw.type === "dare" ? "dare" : "truth",
+    category,
+    difficulty,
+    prompt,
+    remoteFriendly: typeof raw.remoteFriendly === "boolean" ? raw.remoteFriendly : true,
+    tags: Array.isArray(raw.tags) ? raw.tags.map(String) : [],
+    weight: typeof raw.weight === "number" && raw.weight > 0 ? raw.weight : 1,
+    couples: raw.couples,
+    team: raw.team,
+  };
+}
+
+export function normalizeDifficulty(value: string): PromptDifficulty {
+  const v = value.trim().toLowerCase().replace(/\s+/g, "_");
+  if (v === "cool" || v === "spicy" || v === "extreme" || v === "no_boundaries") return v;
+  return "cool";
+}
+
+export function slugCategory(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
 }

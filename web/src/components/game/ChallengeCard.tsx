@@ -49,7 +49,7 @@ export function ChallengeCard({ challenge }: { challenge: CurrentChallenge }) {
         >
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
           <div className="mb-6 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span
                 className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]"
                 style={{
@@ -60,8 +60,13 @@ export function ChallengeCard({ challenge }: { challenge: CurrentChallenge }) {
                 {challenge.type}
               </span>
               <span className="rounded-full bg-white/5 px-3 py-1 text-xs capitalize text-muted">
-                {levelLabel(challenge.level)} · {challenge.category}
+                {levelLabel(challenge.level)} · {challenge.category.replace(/_/g, " ")}
               </span>
+              {challenge.remoteFriendly && (
+                <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">
+                  remote
+                </span>
+              )}
             </div>
             {remaining !== null && (
               <div className="flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1 text-xs text-muted">
@@ -72,9 +77,23 @@ export function ChallengeCard({ challenge }: { challenge: CurrentChallenge }) {
           </div>
           <div className="flex items-start gap-3">
             <Sparkles className={isTruth ? "text-sky-300" : "text-rose-300"} />
-            <p className="font-display text-2xl leading-snug text-cream md:text-3xl">
-              {challenge.text}
-            </p>
+            <div>
+              <p className="font-display text-2xl leading-snug text-cream md:text-3xl">
+                {challenge.text}
+              </p>
+              {challenge.tags?.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {challenge.tags.slice(0, 6).map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </motion.div>
       </AnimatePresence>

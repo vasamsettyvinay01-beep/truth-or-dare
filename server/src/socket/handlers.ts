@@ -25,6 +25,26 @@ function broadcastRoom(io: AppServer, code: string) {
 export function registerSocketHandlers(io: AppServer) {
   io.on("connection", (socket: AppSocket) => {
     socket.emit("prompts:pack", promptEngine.getPack());
+    socket.emit("prompts:summary", promptEngine.getSummary());
+
+    socket.on("prompts:query", (query, ack) => {
+      try {
+        const roomCode = roomManager.getRoomCodeForSocket(socket.id) || undefined;
+        const result = promptEngine.query(query || {}, roomCode);
+        ack?.({ ok: true, data: result });
+      } catch (e) {
+        ack?.({ ok: false, error: errPayload(e) });
+      }
+    });
+
+    socket.on("prompts:export", (ack) => {
+      try {
+        const roomCode = roomManager.getRoomCodeForSocket(socket.id) || undefined;
+        ack?.({ ok: true, data: { pack: promptEngine.getPack(roomCode) } });
+      } catch (e) {
+        ack?.({ ok: false, error: errPayload(e) });
+      }
+    });
 
     socket.on("room:create", (payload, ack) => {
       try {
@@ -154,6 +174,7 @@ export function registerSocketHandlers(io: AppServer) {
       try {
         const { room, pack: merged } = roomManager.importPrompts(socket.id, pack);
         io.to(room.code).emit("prompts:pack", merged);
+        io.to(room.code).emit("prompts:summary", promptEngine.getSummary(room.code));
         broadcastRoom(io, room.code);
       } catch (e) {
         socket.emit("room:error", errPayload(e));

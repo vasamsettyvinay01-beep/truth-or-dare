@@ -1,106 +1,146 @@
 import path from "path";
-import fs from "fs";
-import type { ChallengeType, GameLevel, GameMode, PromptItem, PromptPack } from "@tod/shared";
+import {
+  type GameMode,
+  type PromptPack,
+  type PromptPackSummary,
+  type PromptPickResult,
+  type PromptQuery,
+  type PromptRecord,
+} from "@tod/shared";
+import { loadPacksFromDir, normalizePack, PromptCatalog } from "./catalog";
 
 const PROMPTS_DIR = path.resolve(__dirname, "../../prompts");
 
+/**
+ * Professional prompt engine for large multiplayer packs.
+ * - Loads every JSON pack from server/prompts
+ * - Indexed search / filter / weighted pick
+ * - Room overlays for imported community packs
+ * - Strict no-repeat during a session (configurable)
+ */
 export class PromptEngine {
-  private pack: PromptPack;
-  private customPacks: Map<string, PromptPack> = new Map();
+  private catalog = new PromptCatalog();
+  private roomOverlays = new Map<string, PromptRecord[]>();
+  private roomCatalogs = new Map<string, PromptCatalog>();
 
-  constructor() {
-    this.pack = this.loadCorePack();
+  constructor(dir = PROMPTS_DIR) {
+    this.reloadFromDisk(dir);
   }
 
-  private loadCorePack(): PromptPack {
-    const file = path.join(PROMPTS_DIR, "core-pack.json");
-    const raw = fs.readFileSync(file, "utf-8");
-    return JSON.parse(raw) as PromptPack;
-  }
-
-  getPack(): PromptPack {
-    return this.mergePacks();
-  }
-
-  getCategories(): string[] {
-    return [...new Set(this.getPack().prompts.map((p) => p.category))].sort();
-  }
-
-  importPack(pack: PromptPack, roomId: string): PromptPack {
-    if (!pack?.prompts?.length) {
-      throw new Error("Invalid prompt pack");
+  reloadFromDisk(dir = PROMPTS_DIR) {
+    this.catalog.clear();
+    const packs = loadPacksFromDir(dir);
+    if (!packs.length) {
+      console.warn(`[prompts] no packs found in ${dir}`);
     }
-    const normalized: PromptPack = {
-      id: pack.id || `custom-${roomId}`,
-      name: pack.name || "Custom Pack",
-      version: pack.version || "1.0.0",
-      description: pack.description,
-      categories: pack.categories?.length
-        ? pack.categories
-        : [...new Set(pack.prompts.map((p) => p.category))],
-      prompts: pack.prompts.map((p, i) => ({
-        ...p,
-        id: p.id || `custom-${roomId}-${i}`,
-      })),
+    for (const pack of packs) {
+      this.catalog.addPack(pack);
+      console.log(`[prompts] loaded ${pack.id}: ${pack.prompts.length} prompts`);
+    }
+    this.roomCatalogs.clear();
+  }
+
+  private catalogFor(roomId?: string): PromptCatalog {
+    if (!roomId) return this.catalog;
+    const overlay = this.roomOverlays.get(roomId);
+    if (!overlay?.length) return this.catalog;
+
+    let cached = this.roomCatalogs.get(roomId);
+    if (!cached) {
+      cached = new PromptCatalog();
+      // Clone base by re-adding pack snapshot
+      cached.addPack(this.catalog.toPack("base", "Base"));
+      cached.addOverlayPrompts(overlay);
+      this.roomCatalogs.set(roomId, cached);
+    }
+    return cached;
+  }
+
+  getPack(roomId?: string): PromptPack {
+    return this.catalogFor(roomId).toPack(
+      roomId ? `room-${roomId}` : "catalog",
+      roomId ? "Room Prompt Pack" : "Truth or Dare Catalog"
+    );
+  }
+
+  getSummary(roomId?: string): PromptPackSummary {
+    return this.catalogFor(roomId).summary();
+  }
+
+  getCategories(roomId?: string): string[] {
+    return this.catalogFor(roomId).getCategories();
+  }
+
+  query(query: PromptQuery, roomId?: string) {
+    const cat = this.catalogFor(roomId);
+    const result = cat.query(query);
+    return {
+      ...result,
+      summary: cat.summary(),
     };
-    this.customPacks.set(roomId, normalized);
-    return this.mergePacks(roomId);
+  }
+
+  importPack(input: unknown, roomId: string): PromptPack {
+    const pack = normalizePack(input);
+    const existing = this.roomOverlays.get(roomId) || [];
+    // Dedupe by id — imports replace same ids
+    const byId = new Map(existing.map((p) => [p.id, p]));
+    for (const p of pack.prompts) byId.set(p.id, p);
+    this.roomOverlays.set(roomId, [...byId.values()]);
+    this.roomCatalogs.delete(roomId);
+    return this.getPack(roomId);
+  }
+
+  replaceRoomPack(input: unknown, roomId: string): PromptPack {
+    const pack = normalizePack(input);
+    this.roomOverlays.set(roomId, pack.prompts);
+    this.roomCatalogs.delete(roomId);
+    return this.getPack(roomId);
   }
 
   clearRoomPack(roomId: string) {
-    this.customPacks.delete(roomId);
-  }
-
-  private mergePacks(roomId?: string): PromptPack {
-    const custom = roomId ? this.customPacks.get(roomId) : undefined;
-    if (!custom) return this.pack;
-    return {
-      id: "merged",
-      name: `${this.pack.name} + ${custom.name}`,
-      version: "merged",
-      categories: [...new Set([...this.pack.categories, ...custom.categories])],
-      prompts: [...this.pack.prompts, ...custom.prompts],
-    };
+    this.roomOverlays.delete(roomId);
+    this.roomCatalogs.delete(roomId);
   }
 
   pickPrompt(options: {
     roomId: string;
-    type: ChallengeType;
-    level: GameLevel;
+    type: PromptRecord["type"];
+    level: PromptRecord["difficulty"];
     mode: GameMode;
     enabledCategories: string[];
     usedIds: Set<string>;
-  }): PromptItem | null {
-    const pack = this.mergePacks(options.roomId);
-    let pool = pack.prompts.filter((p) => {
-      if (p.type !== options.type) return false;
-      if (p.level !== options.level) return false;
-      if (options.enabledCategories.length && !options.enabledCategories.includes(p.category)) {
-        return false;
-      }
-      if (options.usedIds.has(p.id)) return false;
-      if (options.mode === "couples" && !p.couples) return false;
-      if (options.mode === "team_battle" && p.couples) return false;
-      if (options.mode !== "couples" && p.couples) return false;
-      return true;
+    remoteOnly?: boolean;
+    categoryWeights?: Record<string, number>;
+    strictNoRepeat?: boolean;
+  }): PromptPickResult | null {
+    return this.catalogFor(options.roomId).pick({
+      type: options.type,
+      difficulty: options.level,
+      enabledCategories: options.enabledCategories,
+      usedIds: options.usedIds,
+      remoteOnly: options.remoteOnly,
+      mode: options.mode,
+      categoryWeights: options.categoryWeights,
+      strictNoRepeat: options.strictNoRepeat ?? true,
+      weighted: true,
     });
+  }
 
-    // Soft fallback: ignore used ids if pool empty
-    if (!pool.length) {
-      pool = pack.prompts.filter((p) => {
-        if (p.type !== options.type) return false;
-        if (p.level !== options.level) return false;
-        if (options.enabledCategories.length && !options.enabledCategories.includes(p.category)) {
-          return false;
-        }
-        if (options.mode === "couples" && !p.couples) return false;
-        if (options.mode !== "couples" && p.couples) return false;
-        return true;
-      });
+  /** Convenience: pick or throw */
+  mustPick(options: Parameters<PromptEngine["pickPrompt"]>[0]): PromptRecord {
+    const result = this.pickPrompt(options);
+    if (!result) {
+      throw Object.assign(
+        new Error(
+          options.strictNoRepeat !== false
+            ? "No unused prompts left for this filter — enable more categories or reuse is disabled"
+            : "No prompts available for this filter"
+        ),
+        { code: "NO_PROMPTS" }
+      );
     }
-
-    if (!pool.length) return null;
-    return pool[Math.floor(Math.random() * pool.length)];
+    return result.prompt;
   }
 }
 

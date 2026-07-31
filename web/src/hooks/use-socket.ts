@@ -187,8 +187,8 @@ export function useGameActions() {
       getSocket().emit("chat:react", emoji, targetPlayerId);
     },
 
-    importPrompts(pack: PromptPack) {
-      getSocket().emit("room:import-prompts", pack);
+    importPrompts(pack: PromptPack | { prompts: unknown[] } | unknown[]) {
+      getSocket().emit("room:import-prompts", pack as PromptPack);
     },
 
     returnToLobby() {
