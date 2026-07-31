@@ -1,8 +1,12 @@
+# Render Blueprint — Socket.IO API for Truth or Dare
+# One-click: https://dashboard.render.com/blueprints/new?repo=https://github.com/vasamsettyvinay01-beep/truth-or-dare
+
 services:
   - type: web
     name: truth-or-dare-api
     runtime: node
     plan: free
+    region: oregon
     rootDir: .
     buildCommand: npm install && npm run build -w shared && npm run build -w server
     startCommand: npm run start -w server
@@ -10,7 +14,7 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
-      - key: PORT
-        value: "4001"
       - key: CLIENT_ORIGIN
-        sync: false
+        value: https://truth-or-dare-gray.vercel.app
+      - key: CLIENT_ORIGINS
+        value: https://truth-or-dare-gray.vercel.app,https://truth-or-dare-vasamsettyvinay01-beeps-projects.vercel.app,https://truth-or-dare.vercel.app
