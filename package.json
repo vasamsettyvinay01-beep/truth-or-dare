@@ -1,0 +1,29 @@
+{
+  "name": "truth-or-dare",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Premium real-time multiplayer Truth or Dare web application",
+  "workspaces": [
+    "shared",
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c magenta,cyan \"npm run dev -w server\" \"npm run dev -w web\"",
+    "dev:server": "npm run dev -w server",
+    "dev:web": "npm run dev -w web",
+    "build": "npm run build -w shared && npm run build -w server && npm run build -w web",
+    "start": "concurrently -n server,web -c magenta,cyan \"npm run start -w server\" \"npm run start -w web\"",
+    "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "overrides": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

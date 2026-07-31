@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Syne", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-ink: #07070b;
+  --color-ink-elevated: #0e0e16;
+  --color-panel: rgba(18, 18, 28, 0.72);
+  --color-line: rgba(255, 255, 255, 0.08);
+  --color-muted: #94a3b8;
+  --color-cream: #f4f0e6;
+  --color-accent: #ff4d6d;
+  --color-accent-2: #7c5cff;
+  --color-truth: #38bdf8;
+  --color-dare: #fb7185;
+  --color-success: #34d399;
+  --color-warn: #fbbf24;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    min-height: 100%;
+  }
+
+  body {
+    margin: 0;
+    color: var(--color-cream);
+    font-family: var(--font-body);
+    background: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-accent) 40%, transparent);
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0.02)
+    );
+    border: 1px solid var(--color-line);
+    backdrop-filter: blur(18px);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.02) inset,
+      0 20px 50px rgba(0, 0, 0, 0.35);
+  }
+
+  .glow-accent {
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--color-accent) 35%, transparent),
+      0 0 40px color-mix(in oklab, var(--color-accent) 25%, transparent);
+  }
+
+  .text-gradient {
+    background: linear-gradient(120deg, #fff 10%, #ff8fab 45%, #a78bfa 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .noise {
+    position: relative;
+  }
+
+  .noise::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+  }
+}
